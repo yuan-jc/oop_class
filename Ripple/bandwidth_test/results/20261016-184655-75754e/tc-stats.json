@@ -1,0 +1,132 @@
+{
+  "configured": {
+    "qdisc": [
+      {
+        "kind": "htb",
+        "handle": "1:",
+        "root": true,
+        "refcnt": 7,
+        "options": {
+          "r2q": 10,
+          "default": "0x10",
+          "direct_packets_stat": 0,
+          "direct_qlen": 1000
+        },
+        "bytes": 0,
+        "packets": 0,
+        "drops": 0,
+        "overlimits": 0,
+        "requeues": 0,
+        "backlog": 0,
+        "qlen": 0
+      },
+      {
+        "kind": "bfifo",
+        "handle": "10:",
+        "parent": "1:10",
+        "options": {
+          "limit": 1048576
+        },
+        "bytes": 0,
+        "packets": 0,
+        "drops": 0,
+        "overlimits": 0,
+        "requeues": 0,
+        "backlog": 0,
+        "qlen": 0
+      }
+    ],
+    "class": [
+      {
+        "class": "htb",
+        "handle": "1:10",
+        "root": true,
+        "leaf": "0x10",
+        "prio": 0,
+        "rate": 64000,
+        "ceil": 64000,
+        "burst": 1600,
+        "cburst": 1600,
+        "stats": {
+          "bytes": 0,
+          "packets": 0,
+          "drops": 0,
+          "overlimits": 0,
+          "requeues": 0,
+          "backlog": 0,
+          "qlen": 0,
+          "lended": 0,
+          "borrowed": 0,
+          "giants": 0,
+          "tokens": 390625,
+          "ctokens": 390625
+        }
+      }
+    ]
+  },
+  "at_deadline": {
+    "qdisc": [
+      {
+        "kind": "htb",
+        "handle": "1:",
+        "root": true,
+        "refcnt": 7,
+        "options": {
+          "r2q": 10,
+          "default": "0x10",
+          "direct_packets_stat": 0,
+          "direct_qlen": 1000
+        },
+        "bytes": 5821141,
+        "packets": 7839,
+        "drops": 0,
+        "overlimits": 4310,
+        "requeues": 0,
+        "backlog": 147705,
+        "qlen": 173
+      },
+      {
+        "kind": "bfifo",
+        "handle": "10:",
+        "parent": "1:10",
+        "options": {
+          "limit": 1048576
+        },
+        "bytes": 5821141,
+        "packets": 7839,
+        "drops": 0,
+        "overlimits": 0,
+        "requeues": 0,
+        "backlog": 147705,
+        "qlen": 173
+      }
+    ],
+    "class": [
+      {
+        "class": "htb",
+        "handle": "1:10",
+        "root": true,
+        "leaf": "0x10",
+        "prio": 0,
+        "rate": 64000,
+        "ceil": 64000,
+        "burst": 1600,
+        "cburst": 1600,
+        "stats": {
+          "bytes": 5821141,
+          "packets": 7839,
+          "drops": 0,
+          "overlimits": 4310,
+          "requeues": 0,
+          "backlog": 147705,
+          "qlen": 173,
+          "lended": 4312,
+          "borrowed": 0,
+          "giants": 0,
+          "tokens": -16631910,
+          "ctokens": -16631910
+        }
+      }
+    ]
+  }
+}

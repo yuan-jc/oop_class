@@ -1,0 +1,5 @@
+{
+  "status": "failed",
+  "error": "等待超时：全部订阅者收到探测消息",
+  "result_directory": "/mnt/d/Ripple/bandwidth_test/results/20261016-165158-bbd7e1"
+}

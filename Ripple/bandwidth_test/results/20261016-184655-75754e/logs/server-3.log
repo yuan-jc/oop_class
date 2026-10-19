@@ -1,0 +1,5 @@
+java.lang.NullPointerException
+	at ripple.server.core.Tracker.retrySending(Tracker.java:81)
+	at ripple.server.core.Tracker.retry(Tracker.java:73)
+	at ripple.server.core.Worker.run(Worker.java:46)
+	at java.lang.Thread.run(Thread.java:750)

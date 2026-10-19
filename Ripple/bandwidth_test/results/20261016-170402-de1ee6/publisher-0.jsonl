@@ -1,0 +1,3 @@
+{"event":"send","seq":-1,"id":0,"time":1792141476.103000000,"uuid":"f3c7ad47-6c60-4532-ab47-dd69897e12c3","ok":true,"lag_ms":0.0000}
+{"event":"write","seq":-1,"id":0,"time":1792141476.130000000,"uuid":"f3c7ad47-6c60-4532-ab47-dd69897e12c3","ok":true,"lag_ms":0.0000}
+{"event":"put_response","seq":-1,"id":0,"time":1792141476.188000000,"uuid":"f3c7ad47-6c60-4532-ab47-dd69897e12c3","ok":true,"lag_ms":0.0000}

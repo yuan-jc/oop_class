@@ -1,0 +1,12 @@
+{"event":"subscribe_response","seq":-1,"id":1,"time":1792140697.901000000,"uuid":"515d3c97-db17-4934-99f3-f8c0a7bc2a23","ok":true,"lag_ms":0.0000}
+{"event":"receive","seq":-1,"id":1,"time":1792140698.230000000,"uuid":"f92223bb-9c8d-4774-b4fe-69c1be9fdc63","ok":true,"lag_ms":0.0000}
+{"event":"receive","seq":0,"id":1,"time":1792140699.439000000,"uuid":"aab30768-1188-4182-af79-4867f8591560","ok":true,"lag_ms":0.0000}
+{"event":"receive","seq":1,"id":1,"time":1792140699.635000000,"uuid":"9375faa2-11ce-4923-85f8-d51e5c9ba846","ok":true,"lag_ms":0.0000}
+{"event":"receive","seq":2,"id":1,"time":1792140699.836000000,"uuid":"8c5de214-7c16-48e5-8f42-cec9ccf3b272","ok":true,"lag_ms":0.0000}
+{"event":"receive","seq":3,"id":1,"time":1792140700.094000000,"uuid":"23023efc-fcd8-4f0c-acf8-2cf140ac58c8","ok":true,"lag_ms":0.0000}
+{"event":"receive","seq":4,"id":1,"time":1792140700.291000000,"uuid":"2c9e18c8-c2d3-4fd1-88d6-92355002908b","ok":true,"lag_ms":0.0000}
+{"event":"receive","seq":5,"id":1,"time":1792140700.486000000,"uuid":"ca7516ca-5d0e-4326-a67b-04156eaffba1","ok":true,"lag_ms":0.0000}
+{"event":"receive","seq":6,"id":1,"time":1792140700.687000000,"uuid":"189f774e-3538-4871-8197-5ff08093e61a","ok":true,"lag_ms":0.0000}
+{"event":"receive","seq":7,"id":1,"time":1792140700.895000000,"uuid":"0f44ea56-35ea-4911-9830-1dbb9a50d01f","ok":true,"lag_ms":0.0000}
+{"event":"receive","seq":8,"id":1,"time":1792140701.087000000,"uuid":"7b76ede6-0a63-45c7-9a80-a559d3a7296b","ok":true,"lag_ms":0.0000}
+{"event":"receive","seq":9,"id":1,"time":1792140701.293000000,"uuid":"4b1e8b98-609e-4b7f-a6b8-cca5f776ba5f","ok":true,"lag_ms":0.0000}

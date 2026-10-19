@@ -1,0 +1,4 @@
+second,duration_s,stage,submitted,received_unique,pending,frame_bytes,tcp_payload_bytes,frame_bps,tcp_payload_bps
+0,1.0,send,5,5,0,12556,8530,100448.0,68240.0
+1,1.0,send,5,5,0,12490,8530,99920.0,68240.0
+2,0.013850688934326172,send,0,0,0,0,0,0.0,0.0

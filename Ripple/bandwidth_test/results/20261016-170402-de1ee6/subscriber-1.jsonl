@@ -1,0 +1,2 @@
+{"event":"subscribe_response","seq":-1,"id":1,"time":1792141467.163000000,"uuid":"b925f5f2-3c78-4eb0-aeac-a3cbb39b71a5","ok":true,"lag_ms":0.0000}
+{"event":"receive","seq":-1,"id":1,"time":1792141476.196000000,"uuid":"c13b4f97-a103-4d27-aede-adf244b24aa3","ok":true,"lag_ms":0.0000}

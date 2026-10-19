@@ -1,0 +1,5 @@
+# 保证 Windows 克隆后的 WSL 脚本使用 Linux 换行。
+*.sh text eol=lf
+*.py text eol=lf
+*.java text eol=lf
+*.pcap binary

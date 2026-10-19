@@ -1,0 +1,28 @@
+﻿1792137906.964732 IP 127.0.0.1.53500 > 127.0.0.1.3003: Flags [P.], seq 3895873675:3895873720, ack 1708480584, win 64, options [nop,nop,TS val 1171615332 ecr 3336279814], length 45
+1792137906.964732 IP 127.0.0.1.36662 > 127.0.0.1.3001: Flags [P.], seq 2584715137:2584715182, ack 4116207431, win 64, options [nop,nop,TS val 1754379448 ecr 502827579], length 45
+1792137906.964732 IP 127.0.0.1.34222 > 127.0.0.1.3002: Flags [P.], seq 3707038227:3707038272, ack 2970887051, win 64, options [nop,nop,TS val 2037186013 ecr 3123624876], length 45
+1792137906.965283 IP 127.0.0.1.3002 > 127.0.0.1.34222: Flags [P.], seq 1:54, ack 45, win 64, options [nop,nop,TS val 3123634876 ecr 2037186013], length 53
+1792137906.965311 IP 127.0.0.1.34222 > 127.0.0.1.3002: Flags [.], ack 54, win 64, options [nop,nop,TS val 2037186013 ecr 3123634876], length 0
+1792137906.965314 IP 127.0.0.1.3003 > 127.0.0.1.53500: Flags [P.], seq 1:54, ack 45, win 64, options [nop,nop,TS val 3336289815 ecr 1171615332], length 53
+1792137906.965317 IP 127.0.0.1.3001 > 127.0.0.1.36662: Flags [P.], seq 1:54, ack 45, win 64, options [nop,nop,TS val 502837580 ecr 1754379448], length 53
+1792137906.965329 IP 127.0.0.1.36662 > 127.0.0.1.3001: Flags [.], ack 54, win 64, options [nop,nop,TS val 1754379449 ecr 502837580], length 0
+1792137906.965340 IP 127.0.0.1.53500 > 127.0.0.1.3003: Flags [.], ack 54, win 64, options [nop,nop,TS val 1171615333 ecr 3336289815], length 0
+1792137912.359436 IP 127.0.0.1.36484 > 127.0.0.1.3002: Flags [P.], seq 1393489691:1393489833, ack 3199262072, win 64, options [nop,nop,TS val 1035678099 ecr 1772033264], length 142
+1792137912.378105 IP 127.0.0.1.47846 > 127.0.0.1.5001: Flags [P.], seq 1590140441:1590140583, ack 986871610, win 64, options [nop,nop,TS val 1975182268 ecr 1222331462], length 142
+1792137912.378107 IP 127.0.0.1.3002 > 127.0.0.1.36484: Flags [P.], seq 1:47, ack 142, win 64, options [nop,nop,TS val 1772197609 ecr 1035678099], length 46
+1792137912.378138 IP 127.0.0.1.5001 > 127.0.0.1.47846: Flags [.], ack 142, win 64, options [nop,nop,TS val 1222495766 ecr 1975182268], length 0
+1792137912.378139 IP 127.0.0.1.36484 > 127.0.0.1.3002: Flags [.], ack 47, win 64, options [nop,nop,TS val 1035678117 ecr 1772197609], length 0
+1792137912.382446 IP 127.0.0.1.35434 > 127.0.0.1.3003: Flags [P.], seq 977492769:977492911, ack 2938091571, win 64, options [nop,nop,TS val 1880458069 ecr 1301835775], length 142
+1792137912.399006 IP 127.0.0.1.5001 > 127.0.0.1.47846: Flags [P.], seq 1:47, ack 142, win 64, options [nop,nop,TS val 1222495787 ecr 1975182268], length 46
+1792137912.399048 IP 127.0.0.1.47846 > 127.0.0.1.5001: Flags [.], ack 47, win 64, options [nop,nop,TS val 1975182289 ecr 1222495787], length 0
+1792137912.403935 IP 127.0.0.1.3003 > 127.0.0.1.35434: Flags [P.], seq 1:47, ack 142, win 64, options [nop,nop,TS val 1302000126 ecr 1880458069], length 46
+1792137912.403970 IP 127.0.0.1.35434 > 127.0.0.1.3003: Flags [.], ack 47, win 64, options [nop,nop,TS val 1880458090 ecr 1302000126], length 0
+1792137916.965144 IP 127.0.0.1.36662 > 127.0.0.1.3001: Flags [P.], seq 45:90, ack 54, win 64, options [nop,nop,TS val 1754389448 ecr 502837580], length 45
+1792137916.965144 IP 127.0.0.1.53500 > 127.0.0.1.3003: Flags [P.], seq 45:90, ack 54, win 64, options [nop,nop,TS val 1171625332 ecr 3336289815], length 45
+1792137916.965145 IP 127.0.0.1.34222 > 127.0.0.1.3002: Flags [P.], seq 45:90, ack 54, win 64, options [nop,nop,TS val 2037196013 ecr 3123634876], length 45
+1792137916.965789 IP 127.0.0.1.3002 > 127.0.0.1.34222: Flags [P.], seq 54:107, ack 90, win 64, options [nop,nop,TS val 3123644877 ecr 2037196013], length 53
+1792137916.965823 IP 127.0.0.1.34222 > 127.0.0.1.3002: Flags [.], ack 107, win 64, options [nop,nop,TS val 2037196014 ecr 3123644877], length 0
+1792137916.965838 IP 127.0.0.1.3003 > 127.0.0.1.53500: Flags [P.], seq 54:107, ack 90, win 64, options [nop,nop,TS val 3336299815 ecr 1171625332], length 53
+1792137916.965869 IP 127.0.0.1.53500 > 127.0.0.1.3003: Flags [.], ack 107, win 64, options [nop,nop,TS val 1171625333 ecr 3336299815], length 0
+1792137916.966598 IP 127.0.0.1.3001 > 127.0.0.1.36662: Flags [P.], seq 54:107, ack 90, win 64, options [nop,nop,TS val 502847581 ecr 1754389448], length 53
+1792137916.966624 IP 127.0.0.1.36662 > 127.0.0.1.3001: Flags [.], ack 107, win 64, options [nop,nop,TS val 1754389450 ecr 502847581], length 0

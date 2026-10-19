@@ -1,0 +1,160 @@
+{
+  "submitted": 10,
+  "put_success": 10,
+  "expected_deliveries": 20,
+  "received_unique": 20,
+  "received_during_send": 20,
+  "duplicates": 0,
+  "missing_at_deadline": 0,
+  "delivery_ratio": 1.0,
+  "delivery_ratio_during_send": 1.0,
+  "delivery_ratio_for_successful_puts": 1.0,
+  "subscriber_received": {
+    "1": 10,
+    "2": 10
+  },
+  "subscriber_out_of_order": {
+    "1": 0,
+    "2": 0
+  },
+  "subscriber_missing": {
+    "1": 0,
+    "2": 0
+  },
+  "submitted_value_bytes": 2560,
+  "delivered_value_bytes": 5120,
+  "actual_submit_rate": 4.997501430392377,
+  "negative_latency_samples": 0,
+  "latency_ms": {
+    "samples": 20,
+    "p50": 165.50004482269287,
+    "p95": 177.05004215240479,
+    "p99": 177.80998706817627,
+    "max": 177.99997329711914
+  },
+  "planned_messages": 10,
+  "send_duration_s": 2.000999927520752,
+  "drain_duration_s": 0.1029212474822998,
+  "scheduling_lag_ms_max": 2.1284,
+  "write_failures": 0,
+  "measurement_warnings": [],
+  "captures": {
+    "traffic": {
+      "packet_count": 114,
+      "frame_bytes": 15506,
+      "tcp_payload_bytes": 7854,
+      "unique_tcp_payload_bytes": 7854,
+      "retransmitted_payload_bytes": 0,
+      "message_counts": {
+        "SYSTEM_INFO_REQUEST": 6,
+        "SUBSCRIBE_REQUEST": 2,
+        "SYSTEM_INFO_RESPONSE": 6,
+        "SUBSCRIBE_RESPONSE": 2,
+        "SYNC_REQUEST": 16,
+        "SYNC_RESPONSE": 14
+      },
+      "decode_issues": [],
+      "windows": {
+        "baseline": {
+          "frame_bytes": 0,
+          "tcp_payload_bytes": 0,
+          "unique_tcp_payload_bytes": 0,
+          "packet_count": 0,
+          "duration_s": 1.000105381011963,
+          "frame_bps": 0.0,
+          "tcp_payload_bps": 0.0
+        },
+        "send": {
+          "frame_bytes": 9542,
+          "tcp_payload_bytes": 6110,
+          "unique_tcp_payload_bytes": 6110,
+          "packet_count": 52,
+          "duration_s": 2.000999927520752,
+          "frame_bps": 38148.926919043246,
+          "tcp_payload_bps": 24427.786991757937
+        },
+        "send_and_drain": {
+          "frame_bytes": 9542,
+          "tcp_payload_bytes": 6110,
+          "unique_tcp_payload_bytes": 6110,
+          "packet_count": 52,
+          "duration_s": 2.1039211750030518,
+          "frame_bps": 36282.72813019683,
+          "tcp_payload_bps": 23232.80956565737
+        }
+      },
+      "downlink_send": {
+        "frame_bytes": 7274,
+        "tcp_payload_bytes": 5558,
+        "unique_tcp_payload_bytes": 5558,
+        "packet_count": 26,
+        "duration_s": 2.000999927520752,
+        "frame_bps": 29081.46032373932,
+        "tcp_payload_bps": 22220.890360096662
+      },
+      "downlink_send_and_drain": {
+        "frame_bytes": 7274,
+        "tcp_payload_bytes": 5558,
+        "unique_tcp_payload_bytes": 5558,
+        "packet_count": 26,
+        "duration_s": 2.1039211750030518,
+        "frame_bps": 27658.83089698719,
+        "tcp_payload_bps": 21133.87161471746
+      },
+      "kernel_dropped_packets": 0
+    },
+    "cluster": {
+      "packet_count": 252,
+      "frame_bytes": 28520,
+      "tcp_payload_bytes": 11548,
+      "unique_tcp_payload_bytes": 11548,
+      "retransmitted_payload_bytes": 0,
+      "message_counts": {
+        "HEARTBEAT_REQUEST": 9,
+        "SYNC_REQUEST": 16,
+        "HEARTBEAT_RESPONSE": 9,
+        "SYNC_RESPONSE": 16,
+        "SYSTEM_INFO_REQUEST": 3,
+        "PUT_REQUEST": 9,
+        "SYSTEM_INFO_RESPONSE": 3,
+        "PUT_RESPONSE": 8
+      },
+      "decode_issues": [],
+      "windows": {
+        "baseline": {
+          "frame_bytes": 0,
+          "tcp_payload_bytes": 0,
+          "unique_tcp_payload_bytes": 0,
+          "packet_count": 0,
+          "duration_s": 1.000105381011963,
+          "frame_bps": 0.0,
+          "tcp_payload_bps": 0.0
+        },
+        "send": {
+          "frame_bytes": 14848,
+          "tcp_payload_bytes": 9172,
+          "unique_tcp_payload_bytes": 9172,
+          "packet_count": 86,
+          "duration_s": 2.000999927520752,
+          "frame_bps": 59362.32099077281,
+          "tcp_payload_bps": 36669.66649564711
+        },
+        "send_and_drain": {
+          "frame_bytes": 14848,
+          "tcp_payload_bytes": 9172,
+          "unique_tcp_payload_bytes": 9172,
+          "packet_count": 86,
+          "duration_s": 2.1039211750030518,
+          "frame_bps": 56458.38894122433,
+          "tcp_payload_bps": 34875.83131525522
+        }
+      },
+      "kernel_dropped_packets": 0
+    }
+  },
+  "status": "complete",
+  "stability": "all_delivered",
+  "total_send_and_drain_frame_bytes": 24390,
+  "total_send_and_drain_tcp_payload_bytes": 15282,
+  "frame_bytes_per_submission": 2439.0
+}

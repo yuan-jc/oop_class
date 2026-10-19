@@ -1,0 +1,35 @@
+{
+  "size": 1024,
+  "rate": 20.0,
+  "duration": 60.0,
+  "subscribers": 1,
+  "servers": 3,
+  "drain_timeout": 30,
+  "baseline_duration": 1.0,
+  "seed": 42,
+  "queue_bytes": 1048576,
+  "bandwidth": "64kbit",
+  "ripple_root": "/mnt/d/Ripple/Ripple",
+  "output": "/mnt/d/Ripple/bandwidth_test/results",
+  "run_id": "20261016-165727-dbb05d",
+  "clock": "同一 WSL 系统时钟，Java Instant.now()",
+  "latency_boundary": "原版客户端业务处理器返回后；包含存储处理时间",
+  "bandwidth_scope": "服务端到全部订阅者的共享下行；反向不限制",
+  "protocol": "hashing",
+  "capture_points": "订阅侧 veth、服务端 lo、订阅侧 lo，各链路单点计数",
+  "java_version": "openjdk version \"1.8.0_504\"\nOpenJDK Runtime Environment (build 1.8.0_504-8u504-ga-1ubuntu1~26.04.3-b01)\nOpenJDK 64-Bit Server VM (build 25.504-b01, mixed mode)",
+  "python_version": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+  "offload": {
+    "rb-s-ba0bd692": {
+      "disabled": true,
+      "detail": ""
+    },
+    "rb-c-ba0bd692": {
+      "disabled": true,
+      "detail": ""
+    }
+  },
+  "baseline_start": 1792141074.6386282,
+  "baseline_end": 1792141075.6387331,
+  "bandwidth_bps": 64000
+}

@@ -1,0 +1,24 @@
+# Maven
+target/
+
+# IDEA
+.idea/
+out/
+
+# JNI Header
+jni/
+
+*.iws
+*.iml
+*.ipr
+
+*.db
+*.log
+
+# Office
+~*.doc
+~*.docx
+~*.xls
+~*.xlsx
+~*.ppt
+~*.pptx

@@ -1,0 +1,15 @@
+# 仅排除可重新生成的构建文件和运行缓存，保留统计与抓包。
+**/target/
+**/__pycache__/
+*.pyc
+**/assets/
+**/classes/
+**/databases/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.class
+*.jar
+*.ready
+*.sent
