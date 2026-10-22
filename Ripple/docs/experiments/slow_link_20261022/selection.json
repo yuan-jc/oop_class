@@ -1,0 +1,21 @@
+{
+  "selected": {
+    "base": "/var/tmp/ripple-slow-link-formal-20261022/base/repeat-1",
+    "delay": "/var/tmp/ripple-slow-link-formal-20261022/delay/repeat-1",
+    "loss": "/var/tmp/ripple-slow-link-loss-retry-20261022/loss/repeat-1"
+  },
+  "excluded": [
+    {
+      "directory": "/var/tmp/ripple-slow-link-formal-20261022/loss/repeat-1",
+      "reason": "人工TCP诊断使用jsonl后缀，被框架识别为业务事件而中断；未作为最终丢包结果"
+    },
+    {
+      "directory": "/var/tmp/ripple-slow-smoke-20261022",
+      "reason": "原始版本启动异常，预备组"
+    },
+    {
+      "directory": "/var/tmp/ripple-slow-smoke-tbf-20261022",
+      "reason": "3秒冒烟测试，不是正式60秒组"
+    }
+  ]
+}

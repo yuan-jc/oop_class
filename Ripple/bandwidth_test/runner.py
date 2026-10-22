@@ -17,6 +17,7 @@ import uuid
 
 from capture import analyze_pcap, window_totals
 from metrics import parse_bandwidth, summarize, time_series, validate
+from support import code_identity, content_integrity, dependency_identity, drain_complete, file_sha256, git_commit, server_log_warnings, wire_options
 
 HERE = Path(__file__).resolve().parent
 
@@ -61,6 +62,9 @@ class Experiment:
                            protocol="hashing", capture_points="订阅侧 veth、服务端 lo、订阅侧 lo，各链路单点计数")
         self.config = {key: str(value) if isinstance(value, Path) else value for key, value in self.config.items()}
         self.config["database_runtime_directory"] = str(self.database_root)
+        self.config.update(code_identity(args.ripple_root))
+        self.config["tool_git_commit"] = git_commit(HERE)
+        self.config["wire_jvm_options"] = wire_options(args.wire_mode)
         self.config["database_storage"] = "运行时使用 Linux 临时目录，结束后复制到结果目录 databases/"
         token = uuid.uuid4().hex[:8]
         self.server_ns, self.client_ns = "rb-s-"+token, "rb-c-"+token
@@ -82,6 +86,11 @@ class Experiment:
         return process
 
     def check_alive(self):
+        warnings = server_log_warnings(self.root/"logs")
+        if warnings:
+            self.config["measurement_warnings"] = warnings
+            self.config["server_log_scan_stage"] = "live"
+            raise RuntimeError("运行期间检测到服务日志异常：" + "; ".join(warnings))
         for name, process in self.processes+self.captures:
             if process.poll() is not None:
                 raise RuntimeError(f"进程 {name} 提前退出，请查看 logs/{name}.log")
@@ -130,8 +139,16 @@ class Experiment:
         self.command(["javac", "-encoding", "UTF-8", "-source", "8", "-target", "8",
                       "-cp", classpath, "-d", str(classes), str(HERE/"java"/"Driver.java")])
         self.classpath = f"{classes}:{classpath}"
+        if self.args.staged_start:
+            server = self.root/"assets"/"server"
+            self.server_classpath = f"{classes}:{server}/ripple-server.jar:{server}/lib/*"
+            self.command(["javac", "-encoding", "UTF-8", "-source", "8", "-target", "8",
+                "-cp", self.server_classpath, "-d", str(classes), str(HERE/"java/ServerDriver.java")])
         self.config["java_version"] = self.command(["java", "-version"]).stderr.strip()
         self.config["python_version"] = sys.version
+        self.config["jar_sha256"] = {role: file_sha256(
+            self.root/"assets"/role/f"ripple-{role}.jar") for role in ("server", "client")}
+        self.config["dependency_sha256"] = dependency_identity(self.root/"assets")
 
     def capture(self):
         definitions = [(self.client_ns, "bench0", "traffic", "tcp"),
@@ -145,22 +162,37 @@ class Experiment:
 
     def start_services(self):
         jar = self.root/"assets"/"server"/"ripple-server.jar"
+        staged = getattr(self.args, "staged_start", False)
+        launch = ["-cp", self.server_classpath, "ServerDriver", str(self.root)] if staged else ["-jar", str(jar)]
         for server in range(1, self.args.servers+1):
-            self.spawn(["java", "-Dio.netty.eventLoopThreads=2", "-Dorg.slf4j.simpleLogger.defaultLogLevel=warn",
+            self.spawn(["java"] + wire_options(self.args.wire_mode) + ["-Dio.netty.eventLoopThreads=2", "-Dorg.slf4j.simpleLogger.defaultLogLevel=warn",
                         f"-Did={server}", f"-Daddress={self.server_ip}", f"-DapiPort={13000+server}", "-DuiPort=0",
                         f"-DstorageLocation={self.database_root}/server-{server}.db", f"-Dnodes={self.nodes}",
-                        "-Dprotocol=hashing", f"-DcandidateCount={self.args.servers}", "-jar", str(jar)],
+                        "-Dprotocol=hashing", f"-DcandidateCount={self.args.servers}"] + launch,
                        self.server_ns, f"server-{server}")
         def ports_ready():
-            code = ("import socket; " + "; ".join(
-                f"socket.create_connection(('{self.server_ip}',{13000+i}),.3).close()"
-                for i in range(1, self.args.servers+1)))
-            result = subprocess.run(["ip", "netns", "exec", self.server_ns, "python3", "-c", code],
-                                    capture_output=True)
-            return result.returncode == 0
-        self.wait(ports_ready, "服务端 API 端口")
-        # 初始连接失败的节点由原版 worker 重连；给集群一个完整工作周期。
-        time.sleep(11)
+            result = self.command(["ss", "-ltnH"], self.server_ns)
+            listening = set()
+            for line in result.stdout.splitlines():
+                fields = line.split()
+                if len(fields) >= 4:
+                    host, _, port = fields[3].rpartition(":")
+                    host = host.strip("[]").removeprefix("::ffff:")
+                    if host in (self.server_ip, "0.0.0.0", "::", "*"):
+                        listening.add(port)
+            return all(str(13000+i) in listening for i in range(1, self.args.servers+1))
+        if staged:
+            self.wait(lambda: all((self.root/f"server-{i}.listening").exists()
+                for i in range(1, self.args.servers+1)), "全部服务监听")
+            (self.root/"cluster.start").touch()
+            self.wait(lambda: all((self.root/f"server-{i}.ready").exists()
+                for i in range(1, self.args.servers+1)), "全部集群初始化")
+        else:
+            self.wait(ports_ready, "服务端 API 端口")
+            # 原版启动重连窗口中也及时发现异常，避免日志风暴。
+            for _ in range(110):
+                self.check_alive()
+                time.sleep(.1)
         for subscriber in range(1, self.args.subscribers+1):
             self.driver("subscriber", subscriber, self.client_ns, self.client_ip)
             # 原版服务端的连接表是 ArrayList，避免同时握手触发并发添加竞态。
@@ -183,10 +215,10 @@ class Experiment:
         self.wait(probe_received, "全部订阅者收到探测消息")
 
     def driver(self, role, identifier, namespace, address):
-        self.spawn(["java", "-Dio.netty.eventLoopThreads=2", "-Dorg.slf4j.simpleLogger.defaultLogLevel=warn",
+        self.spawn(["java"] + wire_options(self.args.wire_mode) + ["-Dio.netty.eventLoopThreads=2", "-Dorg.slf4j.simpleLogger.defaultLogLevel=warn",
                     "-cp", self.classpath, "Driver", role, address, self.nodes, str(self.root), self.app,
                     str(identifier), str(self.args.size), str(self.args.rate), str(self.args.duration),
-                    str(self.args.seed), str(self.database_root)], namespace, f"{role}-{identifier}")
+                    str(self.args.seed), str(self.database_root), self.args.payload], namespace, f"{role}-{identifier}")
 
     def shape(self):
         if not self.args.bandwidth:
@@ -221,7 +253,11 @@ class Experiment:
         time.sleep(self.args.baseline_duration)
         self.config["baseline_end"] = time.time()
         self.shape()
+        self.config["measurement_warnings"] = server_log_warnings(self.root/"logs")
+        self.config["server_log_scan_stage"] = "before_send"
         write_json(self.root/"config.json", self.config)
+        if self.config["measurement_warnings"]:
+            raise RuntimeError("正式发送前检测到服务日志异常：" + "; ".join(self.config["measurement_warnings"]))
         print("开始发送模拟消息……", flush=True)
         (self.root/"start").touch()
         self.wait(lambda: (self.root/"publisher.sent").exists(), "发送结束", self.args.duration+30)
@@ -235,11 +271,14 @@ class Experiment:
             events = read_events(self.root)
             result = summarize(events, self.args.subscribers, self.args.size,
                                self.config["send_start"], self.config["send_end"], time.time())
-            if result["submitted"] and result["missing_at_deadline"] == 0 and result["put_success"] == result["submitted"]:
-                break
-            if time.monotonic() >= drain_end:
+            if drain_complete(result, self.args.fixed_drain, time.monotonic(), drain_end):
                 break
             time.sleep(.1)
+        self.config["measurement_server_log_sizes"] = {path.name: path.stat().st_size
+            for path in (self.root/"logs").glob("server-*.log")}
+        self.config["measurement_warnings"] = server_log_warnings(
+            self.root/"logs", self.config["measurement_server_log_sizes"])
+        self.config["server_log_scan_stage"] = "measurement_deadline_before_shutdown"
         self.config["deadline"] = time.time()
         self.tc_stats("at_deadline")
         (self.root/"stop").touch()
@@ -269,11 +308,16 @@ class Experiment:
         events = read_events(self.root, live=False)
         start, end, deadline = (self.config[key] for key in ("send_start", "send_end", "deadline"))
         summary = summarize(events, self.args.subscribers, self.args.size, start, end, deadline)
+        summary.update(content_integrity(events, deadline))
         summary["planned_messages"] = self.config["planned_messages"]
         summary["send_duration_s"], summary["drain_duration_s"] = end-start, deadline-end
         summary["scheduling_lag_ms_max"] = max((e["lag_ms"] for e in events if e["event"] == "send"), default=None)
         summary["write_failures"] = sum(e["event"] == "write" and not e["ok"] for e in events)
-        summary["measurement_warnings"] = []
+        summary["measurement_warnings"] = server_log_warnings(
+            self.root/"logs", self.config.get("measurement_server_log_sizes"))
+        summary["server_log_scan_stage"] = self.config.get("server_log_scan_stage", "report")
+        if summary["corrupt_content"]:
+            summary["measurement_warnings"].append("收到的载荷与确定性原文不一致")
         captures, flow_rows, packet_rows = {}, [], []
         for point in ("traffic", "cluster", "peers"):
             capture = analyze_pcap(self.root/(point+".pcap"))
@@ -316,7 +360,7 @@ class Experiment:
                   "frame_bytes", "tcp_payload_bytes", "unique_tcp_payload_bytes", "message_counts"])
         write_json(self.root/"summary.json", summary)
         print(json.dumps({key: summary[key] for key in ("status", "submitted", "put_success", "received_unique",
-              "expected_deliveries", "missing_at_deadline", "delivery_ratio", "latency_ms")}, ensure_ascii=False, indent=2), flush=True)
+              "expected_deliveries", "missing_at_deadline", "delivery_ratio", "corrupt_content", "latency_ms")}, ensure_ascii=False, indent=2), flush=True)
         return summary
 
     def cleanup(self):
@@ -345,7 +389,7 @@ class Experiment:
         self.runtime.cleanup()
 
 
-def main():
+def argument_parser():
     parser = argparse.ArgumentParser(description="外部调用原版 Ripple：负载、带宽与限速稳定性测试")
     for name, kind, default in (("size", int, 1024), ("rate", float, 100), ("duration", float, 60),
                                 ("subscribers", int, 1), ("servers", int, 3), ("drain-timeout", float, 30),
@@ -354,6 +398,15 @@ def main():
     parser.add_argument("--bandwidth", help="共享订阅下行，例如 64kbit 或 1mbit")
     parser.add_argument("--ripple-root", type=Path, default=HERE.parent/"Ripple")
     parser.add_argument("--output", type=Path, default=HERE/"results")
+    parser.add_argument("--wire-mode", choices=("legacy", "compact", "adaptive"), default="legacy")
+    parser.add_argument("--payload", choices=("random", "structured"), default="random")
+    parser.add_argument("--fixed-drain", action="store_true", help="始终等待完整排空期限")
+    parser.add_argument("--staged-start", action="store_true", help="先监听全部节点再初始化集群")
+    return parser
+
+
+def main():
+    parser = argument_parser()
     args = parser.parse_args()
     try:
         validate(args.size, args.rate, args.duration, args.subscribers, args.servers)
@@ -366,7 +419,7 @@ def main():
             parse_bandwidth(args.bandwidth)
         if sys.platform != "linux" or os.geteuid() != 0:
             raise ValueError("请在 WSL/Linux 内使用 sudo bash run.sh 运行，隔离网络与抓包需要 root")
-        for tool in ("ip", "tc", "tcpdump", "java", "javac"):
+        for tool in ("ip", "tc", "ss", "tcpdump", "java", "javac"):
             if not shutil.which(tool):
                 raise ValueError(f"缺少工具：{tool}")
         args.ripple_root = args.ripple_root.resolve()
@@ -390,7 +443,8 @@ def main():
         if isinstance(failure, subprocess.CalledProcessError):
             detail += "\n" + (failure.stderr or "")
         write_json(root/"summary.json", {"status": "interrupted" if isinstance(failure, KeyboardInterrupt) else "failed",
-                   "error": detail, "result_directory": str(root)})
+                   "error": detail, "result_directory": str(root),
+                   "measurement_warnings": experiment.config.get("measurement_warnings", [])})
         write_json(root/"config.json", experiment.config)
         print(f"测试未完成：{detail}；日志保留在 {root}", file=sys.stderr)
         return 130 if isinstance(failure, KeyboardInterrupt) else 1

@@ -14,6 +14,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Instant;
+import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,6 +28,9 @@ public class Driver {
     private final Map<UUID, Long> pending = new ConcurrentHashMap<>();
     private final AtomicBoolean subscribed = new AtomicBoolean();
     private RippleClient client;
+    private int payloadSize;
+    private long payloadSeed;
+    private String payloadMode = "random";
 
     private Driver(Path root, int id, String role) throws Exception {
         this.root = root;
@@ -44,6 +48,20 @@ public class Driver {
         events.printf(Locale.ROOT,
                 "{\"event\":\"%s\",\"seq\":%d,\"id\":%d,\"time\":%.9f,\"uuid\":\"%s\",\"ok\":%s,\"lag_ms\":%.4f}%n",
                 type, seq, id, now(), uuid, ok, lag);
+    }
+
+    private synchronized void contentEvent(String type, long seq, String uuid, String value, boolean ok) {
+        try {
+            byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+            StringBuilder hex = new StringBuilder(64);
+            for (byte part : digest) hex.append(String.format(Locale.ROOT, "%02x", part & 255));
+            events.printf(Locale.ROOT,
+                "{\"event\":\"%s\",\"seq\":%d,\"id\":%d,\"time\":%.9f,\"uuid\":\"%s\",\"ok\":%s,\"value_bytes\":%d,\"sha256\":\"%s\"}%n",
+                type, seq, id, now(), uuid, ok, bytes.length, hex);
+        } catch (java.security.NoSuchAlgorithmException failure) {
+            throw new IllegalStateException("缺少SHA-256算法", failure);
+        }
     }
 
     private void hook(Channel channel) throws Exception {
@@ -73,17 +91,14 @@ public class Driver {
                             SyncRequest request = (SyncRequest) message;
                             value = request.getValue();
                             uuid = request.getMessageUuid().toString();
-                            ok = result instanceof SyncResponse;
+                            ok = acceptedSync(result);
                         } else {
                             DispatchRequest request = (DispatchRequest) message;
                             value = request.getValue();
                             uuid = request.getMessageUuid().toString();
                             ok = result instanceof DispatchResponse && ((DispatchResponse) result).isSuccess();
                         }
-                        if (ok && value != null && value.startsWith("RB1:")) {
-                            long seq = Long.parseLong(value.split(":", 3)[1]);
-                            event("receive", seq, uuid, true, 0);
-                        }
+                        observeContent(value, uuid, ok, payloadSize, payloadSeed, payloadMode);
                     }
                     return result;
                 });
@@ -96,13 +111,49 @@ public class Driver {
         for (Channel channel : client.getClientConnections().values()) hook(channel);
     }
 
-    private static String makePayload(long seq, int size, long seed) {
-        String header = String.format(Locale.ROOT, "RB1:%012d:", seq);
+    private static boolean acceptedSync(Message response) {
+        if (!(response instanceof SyncResponse)) return false;
+        Result result = ((SyncResponse) response).getResult();
+        return result == Result.SUCCESS || result == Result.DUPLICATED;
+    }
+
+    private void observeContent(String value, String uuid, boolean ok, int size, long seed, String mode) {
+        if (!ok) return;
+        long seq = -2;
+        if (value != null && (value.startsWith("RB1:") || mode.equals("digits"))) {
+            try {
+                seq = mode.equals("digits") ? Long.parseLong(value.substring(0, 12))
+                        : Long.parseLong(value.split(":", 3)[1]);
+                event("receive", seq, uuid, true, 0);
+            } catch (NumberFormatException | IndexOutOfBoundsException ignored) {
+                // 测试头损坏也应留下完整性证据，不中断原业务处理器。
+            }
+        }
+        boolean identical = seq != -2 && makePayload(seq, size, seed, mode).equals(value);
+        if (mode.equals("digits") && value != null)
+            contentEvent("payload_received", seq, uuid, value, identical);
+        if (!identical)
+            event("content_mismatch", seq, uuid, false, 0);
+    }
+
+    private static String makePayload(long seq, int size, long seed, String mode) {
+        String header = mode.equals("digits") ? String.format(Locale.ROOT, "%012d", seq)
+                : String.format(Locale.ROOT, "RB1:%012d:", seq);
         if (size < header.length()) throw new IllegalArgumentException("消息长度不足");
         Random random = new Random(seed + seq);
         String chars = "abcdefghijklmnopqrstuvwxyz0123456789";
         StringBuilder value = new StringBuilder(size).append(header);
-        while (value.length() < size) value.append(chars.charAt(random.nextInt(chars.length())));
+        if (mode.equals("structured")) {
+            String template = "{\"device\":\"sensor-001\",\"status\":\"normal\",\"temperature\":23,\"region\":\"east\"}|";
+            while (value.length() < size) {
+                int remaining = size - value.length();
+                value.append(template, 0, Math.min(remaining, template.length()));
+            }
+        } else if (mode.equals("digits")) {
+            while (value.length() < size) value.append((char)('0' + random.nextInt(10)));
+        } else if (mode.equals("random")) {
+            while (value.length() < size) value.append(chars.charAt(random.nextInt(chars.length())));
+        } else throw new IllegalArgumentException("未知载荷模式：" + mode);
         return value.toString();
     }
 
@@ -111,9 +162,11 @@ public class Driver {
         request.setUuid(UUID.randomUUID());
         request.setApplicationName(app);
         request.setKey("load");
-        request.setValue(makePayload(seq, size, seed));
+        request.setValue(makePayload(seq, size, seed, payloadMode));
         pending.put(request.getUuid(), seq);
         event("send", seq, request.getUuid().toString(), true, lag);
+        if (payloadMode.equals("digits"))
+            contentEvent("payload_source", seq, request.getUuid().toString(), request.getValue(), true);
         channel.writeAndFlush(request).addListener(future ->
                 event("write", seq, request.getUuid().toString(), future.isSuccess(), 0));
     }
@@ -123,6 +176,9 @@ public class Driver {
         int size = Integer.parseInt(args[6]);
         double rate = Double.parseDouble(args[7]), duration = Double.parseDouble(args[8]);
         long seed = Long.parseLong(args[9]);
+        payloadSize = size;
+        payloadSeed = seed;
+        payloadMode = args.length > 11 ? args[11] : "random";
         List<NodeMetadata> nodes = new ArrayList<>();
         for (String text : nodesText.split(",")) {
             String[] node = text.split(":");

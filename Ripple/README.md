@@ -32,4 +32,14 @@ sudo bash run.sh --size 256 --rate 5 --duration 2 \
 
 `Ripple/` 源码来自 [ISCAS-SSG/Ripple](https://github.com/ISCAS-SSG/Ripple)，归档时版本为 `468e9cb4296110467e3cfdafed412b3dbecfd52a`。原版源码按 [Mulan PSL v2](Ripple/LICENSE) 授权，原作者版权声明和许可证保持原样。
 
-`bandwidth_test/` 为独立测试工具，通过发行包加载原版程序进行实验，不对引擎源码作测试插桩修改。
+`bandwidth_test/` 包含独立测试工具；原版对照通过发行包加载原版程序，优化对照按归档的 Git 标签分别构建。
+
+## 2026-10-23 程序与实验补充归档
+
+- [可视化实验台](ripple_lab/README.md)：包含网页、服务端控制程序、Java 节点适配器；Windows 可双击 `启动Ripple实验台.cmd` 启动。
+- [低速链路测试与校验](bandwidth_test/SLOW_LINK_README.md)：可复用的限速、延时、丢包三组测试。
+- [优化源码版本及恢复方法](source_versions/README.md)：Git bundle 保存原版、紧凑编码、自适应优化的提交历史及实验标签，运行按标签构建的测试前请先恢复。
+- [实测结果](docs/ripple-slow-link-results-20261022.md)及 [结果摘要目录](docs/experiments/)。
+- [汇报 PDF 与 PPTX](docs/presentations/)。
+
+本次补充提交归档现有代码和已整理的结果，未重新运行长时间实验。新增内容未包含运行数据库、依赖 JAR、构建目录及临时日志。

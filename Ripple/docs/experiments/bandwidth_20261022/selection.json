@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "source": "/var/tmp/ripple-bandwidth-only-20261022",
+      "cases": [
+        "bytes_random",
+        "bytes_structured"
+      ]
+    },
+    {
+      "source": "/var/tmp/ripple-bandwidth-small-20261022",
+      "cases": [
+        "bytes_small"
+      ]
+    }
+  ],
+  "reason": "按用户收敛后的带宽占用范围，统一50条每秒且全量交付；排除300条每秒预备组及未完成性能组"
+}

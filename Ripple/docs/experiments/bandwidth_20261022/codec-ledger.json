@@ -1,0 +1,122 @@
+[
+  {
+    "payload": "random",
+    "size": 32,
+    "samples": 1000,
+    "sync_frame_bytes_mean": 173.0,
+    "loop_ms": 129.753624,
+    "roundtrip_ok": true,
+    "version": "v0",
+    "commit": "c9345dc2ebd10e73493a271d5f3f415c4561eca6"
+  },
+  {
+    "payload": "random",
+    "size": 1024,
+    "samples": 1000,
+    "sync_frame_bytes_mean": 1165.0,
+    "loop_ms": 21.665488,
+    "roundtrip_ok": true,
+    "version": "v0",
+    "commit": "c9345dc2ebd10e73493a271d5f3f415c4561eca6"
+  },
+  {
+    "payload": "structured",
+    "size": 32,
+    "samples": 1000,
+    "sync_frame_bytes_mean": 173.0,
+    "loop_ms": 5.186132,
+    "roundtrip_ok": true,
+    "version": "v0",
+    "commit": "c9345dc2ebd10e73493a271d5f3f415c4561eca6"
+  },
+  {
+    "payload": "structured",
+    "size": 1024,
+    "samples": 1000,
+    "sync_frame_bytes_mean": 1165.0,
+    "loop_ms": 8.535796,
+    "roundtrip_ok": true,
+    "version": "v0",
+    "commit": "c9345dc2ebd10e73493a271d5f3f415c4561eca6"
+  },
+  {
+    "payload": "random",
+    "size": 32,
+    "samples": 1000,
+    "sync_frame_bytes_mean": 116.0,
+    "loop_ms": 109.618206,
+    "roundtrip_ok": true,
+    "version": "v1",
+    "commit": "ce6b78f8595e6d38bf00963a19b617b2e34e3363"
+  },
+  {
+    "payload": "random",
+    "size": 1024,
+    "samples": 1000,
+    "sync_frame_bytes_mean": 1108.0,
+    "loop_ms": 19.573603,
+    "roundtrip_ok": true,
+    "version": "v1",
+    "commit": "ce6b78f8595e6d38bf00963a19b617b2e34e3363"
+  },
+  {
+    "payload": "structured",
+    "size": 32,
+    "samples": 1000,
+    "sync_frame_bytes_mean": 116.0,
+    "loop_ms": 8.165758,
+    "roundtrip_ok": true,
+    "version": "v1",
+    "commit": "ce6b78f8595e6d38bf00963a19b617b2e34e3363"
+  },
+  {
+    "payload": "structured",
+    "size": 1024,
+    "samples": 1000,
+    "sync_frame_bytes_mean": 1108.0,
+    "loop_ms": 7.941229,
+    "roundtrip_ok": true,
+    "version": "v1",
+    "commit": "ce6b78f8595e6d38bf00963a19b617b2e34e3363"
+  },
+  {
+    "payload": "random",
+    "size": 32,
+    "samples": 1000,
+    "sync_frame_bytes_mean": 116.0,
+    "loop_ms": 125.211275,
+    "roundtrip_ok": true,
+    "version": "v2",
+    "commit": "0469814aae049be9013811dc2a32044fdbb252c8"
+  },
+  {
+    "payload": "random",
+    "size": 1024,
+    "samples": 1000,
+    "sync_frame_bytes_mean": 785.487,
+    "loop_ms": 35.971386,
+    "roundtrip_ok": true,
+    "version": "v2",
+    "commit": "0469814aae049be9013811dc2a32044fdbb252c8"
+  },
+  {
+    "payload": "structured",
+    "size": 32,
+    "samples": 1000,
+    "sync_frame_bytes_mean": 116.0,
+    "loop_ms": 6.930549,
+    "roundtrip_ok": true,
+    "version": "v2",
+    "commit": "0469814aae049be9013811dc2a32044fdbb252c8"
+  },
+  {
+    "payload": "structured",
+    "size": 1024,
+    "samples": 1000,
+    "sync_frame_bytes_mean": 179.89,
+    "loop_ms": 10.695689,
+    "roundtrip_ok": true,
+    "version": "v2",
+    "commit": "0469814aae049be9013811dc2a32044fdbb252c8"
+  }
+]
