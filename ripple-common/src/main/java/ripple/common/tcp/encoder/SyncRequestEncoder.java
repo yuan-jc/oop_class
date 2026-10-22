@@ -15,6 +15,7 @@ import ripple.common.entity.Constants;
 import ripple.common.helper.TypeHelper;
 import ripple.common.tcp.Encoder;
 import ripple.common.tcp.Message;
+import ripple.common.tcp.PayloadCodec;
 import ripple.common.tcp.message.SyncRequest;
 
 /**
@@ -35,11 +36,11 @@ public class SyncRequestEncoder implements Encoder {
         TypeHelper.writeString(syncRequest.getApplicationName(), byteBuf);
         TypeHelper.writeString(syncRequest.getKey(), byteBuf);
         if (syncRequest.getOperationType().equals(Constants.MESSAGE_TYPE_UPDATE)) {
-            TypeHelper.writeString(syncRequest.getValue(), byteBuf);
+            PayloadCodec.write(syncRequest.getValue(), byteBuf);
         } else if (syncRequest.getOperationType().equals(Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE)) {
             TypeHelper.writeUuid(syncRequest.getBaseMessageUuid(), byteBuf);
             TypeHelper.writeString(syncRequest.getAtomicOperation(), byteBuf);
-            TypeHelper.writeString(syncRequest.getValue(), byteBuf);
+            PayloadCodec.write(syncRequest.getValue(), byteBuf);
         }
         byteBuf.writeLong(syncRequest.getLastUpdate().getTime());
         byteBuf.writeInt(syncRequest.getLastUpdateServerId());
