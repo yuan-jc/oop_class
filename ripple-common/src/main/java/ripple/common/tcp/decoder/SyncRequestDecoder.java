@@ -29,7 +29,8 @@ public class SyncRequestDecoder implements Decoder {
         SyncRequest syncRequest = new SyncRequest();
         syncRequest.setUuid(TypeHelper.readUuid(byteBuf));
         syncRequest.setMessageUuid(TypeHelper.readUuid(byteBuf));
-        syncRequest.setOperationType(TypeHelper.readString(byteBuf));
+        syncRequest.setOperationType(TypeHelper.isCompactWire()
+                ? operationType(byteBuf.readUnsignedByte()) : TypeHelper.readString(byteBuf));
         syncRequest.setApplicationName(TypeHelper.readString(byteBuf));
         syncRequest.setKey(TypeHelper.readString(byteBuf));
         if (syncRequest.getOperationType().equals(Constants.MESSAGE_TYPE_UPDATE)) {
@@ -43,5 +44,18 @@ public class SyncRequestDecoder implements Decoder {
         syncRequest.setLastUpdateServerId(byteBuf.readInt());
         syncRequest.setFromId(byteBuf.readInt());
         return syncRequest;
+    }
+
+    private static String operationType(int operationCode) {
+        switch (operationCode) {
+            case 1:
+                return Constants.MESSAGE_TYPE_UPDATE;
+            case 2:
+                return Constants.MESSAGE_TYPE_DELETE;
+            case 3:
+                return Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE;
+            default:
+                throw new IllegalArgumentException("无效的同步操作编码: " + operationCode);
+        }
     }
 }

@@ -24,11 +24,24 @@ public final class TypeHelper {
     }
 
     public static UUID readUuid(ByteBuf byteBuf) {
+        if (isCompactWire()) {
+            return new UUID(byteBuf.readLong(), byteBuf.readLong());
+        }
         return UUID.fromString(TypeHelper.readString(byteBuf));
     }
 
     public static void writeUuid(UUID value, ByteBuf byteBuf) {
+        if (isCompactWire()) {
+            byteBuf.writeLong(value.getMostSignificantBits());
+            byteBuf.writeLong(value.getLeastSignificantBits());
+            return;
+        }
         TypeHelper.writeString(value.toString(), byteBuf);
+    }
+
+    /** 通信双方必须使用相同配置，协议不自动探测格式。 */
+    public static boolean isCompactWire() {
+        return Boolean.getBoolean("ripple.wire.compact");
     }
 
     public static String readString(ByteBuf byteBuf) {
