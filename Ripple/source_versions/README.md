@@ -30,19 +30,15 @@ git clone source_versions/ripple-bandwidth.bundle Ripple-versions
 git -C Ripple-versions log --all --oneline --decorate
 ```
 
-## 已推送的远程分支（免解包查看）
+## 在线查看版本
 
-上述分支与标签已同步到本仓库，可直接在网页上浏览、对比，不必下载 bundle。
+所有版本标签均已推送到本仓库，可直接在网页上浏览与对比，不必下载 bundle。
 
-| 类型 | 名称 | 说明 |
-| --- | --- | --- |
-| 分支 | `ripple-v0` | 原版（同 `bandwidth-v0-original`，即 bundle 中的 `master`） |
-| 分支 | `experiment/bandwidth-optimization` | 优化主线，含 v1、v2 及文档提交 |
-| 分支 | `experiment/bandwidth-v0-stable` | 原版 + 连接表并发修复 |
-| 分支 | `experiment/bandwidth-v1-stable` | 紧凑编码 + 连接表并发修复 |
-| 标签 | `bandwidth-v0-original`、`bandwidth-v0-stable` | 原版基准 / 带稳定性修复 |
-| 标签 | `bandwidth-v1-compact`、`bandwidth-v1-stable` | UUID 二进制 + 同步操作紧凑编码 |
-| 标签 | `bandwidth-v2-adaptive`、`bandwidth-v2-stable` | 同步与分发载荷自适应 Deflate |
+| 标签 | 内容 |
+| --- | --- |
+| `bandwidth-v0-original`、`bandwidth-v0-stable` | 原版基准 / 带连接表并发修复 |
+| `bandwidth-v1-compact`、`bandwidth-v1-stable` | UUID 二进制编码 + 同步操作紧凑操作码 |
+| `bandwidth-v2-adaptive`、`bandwidth-v2-stable` | 同步与分发载荷自适应 Deflate |
 
 直接对比两个版本：
 
@@ -51,10 +47,17 @@ git -C Ripple-versions log --all --oneline --decorate
 - v1 → v2（自适应 Deflate，7 个文件）：
   <https://github.com/yuan-jc/oop_class/compare/bandwidth-v1-compact...bandwidth-v2-adaptive>
 
-两点注意：
+标签页：<https://github.com/yuan-jc/oop_class/tags>
 
-1. 这些分支的历史根是 Ripple 上游提交（`468e9cb`），与本仓库 `main` 没有共同祖先，因此不能向 `main` 发起合并请求。
-2. 这些分支把 Ripple 项目放在**仓库根目录**，而 `main` 中的副本位于 `Ripple/Ripple/`，浏览时注意路径差异。
+## 优化版分支
+
+除按标签导出外，优化后的完整源码还以一个普通分支提供，目录结构与 `main` 一致，便于在原有位置查看改动：
+
+- 分支 **`ripple/optimized-v2-stable`**：自 `main` 拉出，把 `Ripple/Ripple/` 整体替换为 `bandwidth-v2-stable` 的内容，diff 仅 12 个文件。
+- 对比：<https://github.com/yuan-jc/oop_class/compare/main...ripple/optimized-v2-stable>
+- 代码树：<https://github.com/yuan-jc/oop_class/tree/ripple/optimized-v2-stable/Ripple/Ripple>
+
+注意：标签指向的提交把 Ripple 项目放在**仓库根目录**，并且历史根是 Ripple 上游提交（`468e9cb`），与本仓库 `main` 没有共同祖先，因此只适合按标签导出源码或两两对比，不能直接与 `main` 合并。`ripple/optimized-v2-stable` 则是 `main` 的正常后代，可以合并。
 
 bundle 继续保留：它是离线、单文件、不依赖远端的完整备份。
 
