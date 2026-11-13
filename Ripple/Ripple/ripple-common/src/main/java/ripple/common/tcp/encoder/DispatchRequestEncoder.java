@@ -15,6 +15,7 @@ import ripple.common.entity.Constants;
 import ripple.common.helper.TypeHelper;
 import ripple.common.tcp.Encoder;
 import ripple.common.tcp.Message;
+import ripple.common.tcp.PayloadCodec;
 import ripple.common.tcp.message.DispatchRequest;
 
 /**
@@ -32,11 +33,11 @@ public class DispatchRequestEncoder implements Encoder {
         TypeHelper.writeString(dispatchRequest.getApplicationName(), byteBuf);
         TypeHelper.writeString(dispatchRequest.getKey(), byteBuf);
         if (dispatchRequest.getOperationType().equals(Constants.MESSAGE_TYPE_UPDATE)) {
-            TypeHelper.writeString(dispatchRequest.getValue(), byteBuf);
+            PayloadCodec.write(dispatchRequest.getValue(), byteBuf);
         } else if (dispatchRequest.getOperationType().equals(Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE)) {
             TypeHelper.writeUuid(dispatchRequest.getBaseMessageUuid(), byteBuf);
             TypeHelper.writeString(dispatchRequest.getAtomicOperation(), byteBuf);
-            TypeHelper.writeString(dispatchRequest.getValue(), byteBuf);
+            PayloadCodec.write(dispatchRequest.getValue(), byteBuf);
         }
         byteBuf.writeLong(dispatchRequest.getLastUpdate().getTime());
         byteBuf.writeInt(dispatchRequest.getLastUpdateServerId());

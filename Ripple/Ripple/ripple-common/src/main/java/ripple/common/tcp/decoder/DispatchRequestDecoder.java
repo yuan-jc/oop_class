@@ -15,6 +15,7 @@ import ripple.common.entity.Constants;
 import ripple.common.helper.TypeHelper;
 import ripple.common.tcp.Decoder;
 import ripple.common.tcp.Message;
+import ripple.common.tcp.PayloadCodec;
 import ripple.common.tcp.MessageType;
 import ripple.common.tcp.message.DispatchRequest;
 
@@ -34,11 +35,11 @@ public class DispatchRequestDecoder implements Decoder {
         dispatchRequest.setApplicationName(TypeHelper.readString(byteBuf));
         dispatchRequest.setKey(TypeHelper.readString(byteBuf));
         if (dispatchRequest.getOperationType().equals(Constants.MESSAGE_TYPE_UPDATE)) {
-            dispatchRequest.setValue(TypeHelper.readString(byteBuf));
+            dispatchRequest.setValue(PayloadCodec.read(byteBuf));
         } else if (dispatchRequest.getOperationType().equals(Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE)) {
             dispatchRequest.setBaseMessageUuid(TypeHelper.readUuid(byteBuf));
             dispatchRequest.setAtomicOperation(TypeHelper.readString(byteBuf));
-            dispatchRequest.setValue(TypeHelper.readString(byteBuf));
+            dispatchRequest.setValue(PayloadCodec.read(byteBuf));
         }
         dispatchRequest.setLastUpdate(new Date(byteBuf.readLong()));
         dispatchRequest.setLastUpdateServerId(byteBuf.readInt());
