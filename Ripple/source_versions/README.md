@@ -30,6 +30,34 @@ git clone source_versions/ripple-bandwidth.bundle Ripple-versions
 git -C Ripple-versions log --all --oneline --decorate
 ```
 
+## 已推送的远程分支（免解包查看）
+
+上述分支与标签已同步到本仓库，可直接在网页上浏览、对比，不必下载 bundle。
+
+| 类型 | 名称 | 说明 |
+| --- | --- | --- |
+| 分支 | `ripple-v0` | 原版（同 `bandwidth-v0-original`，即 bundle 中的 `master`） |
+| 分支 | `experiment/bandwidth-optimization` | 优化主线，含 v1、v2 及文档提交 |
+| 分支 | `experiment/bandwidth-v0-stable` | 原版 + 连接表并发修复 |
+| 分支 | `experiment/bandwidth-v1-stable` | 紧凑编码 + 连接表并发修复 |
+| 标签 | `bandwidth-v0-original`、`bandwidth-v0-stable` | 原版基准 / 带稳定性修复 |
+| 标签 | `bandwidth-v1-compact`、`bandwidth-v1-stable` | UUID 二进制 + 同步操作紧凑编码 |
+| 标签 | `bandwidth-v2-adaptive`、`bandwidth-v2-stable` | 同步与分发载荷自适应 Deflate |
+
+直接对比两个版本：
+
+- v0 → v1（UUID 二进制 + 同步操作紧凑编码，4 个文件）：
+  <https://github.com/yuan-jc/oop_class/compare/bandwidth-v0-original...bandwidth-v1-compact>
+- v1 → v2（自适应 Deflate，7 个文件）：
+  <https://github.com/yuan-jc/oop_class/compare/bandwidth-v1-compact...bandwidth-v2-adaptive>
+
+两点注意：
+
+1. 这些分支的历史根是 Ripple 上游提交（`468e9cb`），与本仓库 `main` 没有共同祖先，因此不能向 `main` 发起合并请求。
+2. 这些分支把 Ripple 项目放在**仓库根目录**，而 `main` 中的副本位于 `Ripple/Ripple/`，浏览时注意路径差异。
+
+bundle 继续保留：它是离线、单文件、不依赖远端的完整备份。
+
 ## 实验程序与说明
 
 - `ripple_lab/`：网页实验台、Java 节点适配器与网络控制程序。
