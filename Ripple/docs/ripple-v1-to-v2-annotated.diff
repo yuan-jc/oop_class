@@ -1,0 +1,688 @@
+Ripple 带宽优化：V1 stable → V2 stable（以下说明不是源码改动）
+基准 ce6b78f → 目标 0469814。两版含相同连接表修复，故本补丁只显示 V2 增量。
+阅读索引：
+[1] PayloadCodec.java：抽出同步/分发共享的 value 编解码，避免四处复制判定逻辑。
+    N=UTF-8 原文字节数，C=raw Deflate 字节数。原文字段为 int32(N)+正文；压缩字段为
+    int32(-(C+1))+int32(N)+压缩数据。只有开关打开、N>=512 且 8+C<4+N 才发压缩形式。
+    解码端据符号分支，并检查长度、截断、额外输入和解压上限。无需为原文增加标志字节。
+[2] SyncRequestEncoder/Decoder：普通更新和增量更新都只替换 value 的读写；增量更新的
+    baseMessageUuid 和 atomicOperation 保留原格式。发送端与接收端必须对应修改。
+[3] DispatchRequestEncoder/Decoder：同样两处 value 分支复用该规则。clientListSignature、
+    操作类型等不是压缩对象；删除操作不增加 value。PUT_REQUEST 与外层帧头未改。
+[4] PayloadCodecTest、CompressionWireTest 为新增测试；documents 下为历史版本说明。
+    UUID 紧凑编码和同步操作枚举是 V1 改动，不是本补丁新增。
+以下为归档 Git 原始 unified diff，可在 V1 源码根目录执行 git apply --check 验证。
+
+diff --git a/documents/BandwidthOptimization.zh-cn.md b/documents/BandwidthOptimization.zh-cn.md
+new file mode 100644
+index 0000000..bc18259
+--- /dev/null
++++ b/documents/BandwidthOptimization.zh-cn.md
+@@ -0,0 +1,32 @@
++# 带宽优化实验版本
++
++此分支保留三种可复查版本：
++
++| 标签 | 版本 | 功能 |
++| --- | --- | --- |
++| bandwidth-v0-original | V0 | 原版提交468e9cb |
++| bandwidth-v1-compact | V1 | UUID由40字节改为16字节，同步操作改为1字节 |
++| bandwidth-v2-adaptive | V2 | V1加同步/分发value的自适应Deflate压缩 |
++
++默认开关全部关闭，保留原协议格式。实验集群所有服务端和客户端必须使用相同参数；当前未实现自动协商，不能混用紧凑编码配置，也不能在连接存活期间切换配置。
++
++```text
++V0：-Dripple.wire.compact=false -Dripple.wire.compression=false
++V1：-Dripple.wire.compact=true  -Dripple.wire.compression=false
++V2：-Dripple.wire.compact=true  -Dripple.wire.compression=true
++```
++
++V2使用JDK Deflater.BEST_SPEED，原始UTF-8 value达到512字节且完整编码确实变小才使用压缩，否则保留原文字段。压缩只作用于SYNC_REQUEST与DISPATCH_REQUEST的value（包括增量value），未压缩PUT_REQUEST。不会改变副本数、ACK、去重、存储及更新语义。
++
++压缩字段沿用4字节长度位置：非负表示原文字节数；负数表示`-(压缩字节数+1)`，随后为4字节原文长度与raw Deflate内容。接收端拒绝非法、截断、输出长度不符或额外压缩输入，解压长度上限1MiB。外层仍保持原4字节帧长度与原帧上限。
++
++测试：Java8环境执行`mvn -pl ripple-common test`。新增测试覆盖旧格式精确字节、UUID/操作往返、同步/分发/增量、中文、无收益回退、异常长度和解压上限。
++
++外围实验工具位于上一级独立Git仓库的`bandwidth_test/optimization_suite.py`，按照标签导出源码至Linux运行盘构建；每次运行保留源码提交和实际JAR、依赖摘要。Windows挂载盘不用于并发事件读写，避免此前观察到的Errno61文件系统故障。
++
++```bash
++cd /mnt/d/Ripple
++python3 bandwidth_test/optimization_suite.py --workers 1 --repeats 3 --duration 10 --wait 10 --output /tmp/ripple-wire-reproduce --archive-to /mnt/d/Ripple/optimization_results/reproduce
++```
++
++这两个优化不保证任意数据在512/256 kbit/s下都可稳定承载100条/秒。需要结合实际字节、输入速率、P99与截止处理率判断，不以PUT成功替代订阅者处理成功。
+diff --git a/ripple-common/src/main/java/ripple/common/tcp/PayloadCodec.java b/ripple-common/src/main/java/ripple/common/tcp/PayloadCodec.java
+new file mode 100644
+index 0000000..d7f8fd1
+--- /dev/null
++++ b/ripple-common/src/main/java/ripple/common/tcp/PayloadCodec.java
+@@ -0,0 +1,120 @@
++package ripple.common.tcp;
++
++import io.netty.buffer.ByteBuf;
++import ripple.common.helper.TypeHelper;
++
++import java.nio.charset.StandardCharsets;
++import java.util.zip.DataFormatException;
++import java.util.zip.Deflater;
++import java.util.zip.Inflater;
++
++/** 仅用于同步、分发请求的value；通信双方必须显式使用相同压缩配置。 */
++public final class PayloadCodec {
++    private static final int MIN_COMPRESSION_BYTES = 512;
++    private static final int MAX_PAYLOAD_BYTES = 1024 * 1024;
++
++    private PayloadCodec() {
++    }
++
++    public static void write(String value, ByteBuf buffer) {
++        if (!enabled()) {
++            TypeHelper.writeString(value, buffer);
++            return;
++        }
++        byte[] plain = value.getBytes(StandardCharsets.UTF_8);
++        checkLength(plain.length, true);
++        if (plain.length >= MIN_COMPRESSION_BYTES && writeCompressed(plain, buffer)) return;
++        buffer.writeInt(plain.length).writeBytes(plain);
++    }
++
++    public static String read(ByteBuf buffer) {
++        requireBytes(buffer, 4);
++        if (!enabled()) {
++            if (buffer.getInt(buffer.readerIndex()) < 0) {
++                throw new IllegalArgumentException("未启用value压缩，拒绝压缩标记");
++            }
++            return TypeHelper.readString(buffer);
++        }
++        int marker = buffer.readInt();
++        if (marker >= 0) {
++            checkLength(marker, true);
++            requireBytes(buffer, marker);
++            byte[] plain = new byte[marker];
++            buffer.readBytes(plain);
++            return new String(plain, StandardCharsets.UTF_8);
++        }
++        long compressedLength = -(long) marker - 1;
++        if (compressedLength <= 0 || compressedLength > MAX_PAYLOAD_BYTES) {
++            throw new IllegalArgumentException("非法压缩value长度: " + compressedLength);
++        }
++        requireBytes(buffer, 4);
++        int plainLength = buffer.readInt();
++        checkLength(plainLength, false);
++        requireBytes(buffer, (int) compressedLength);
++        byte[] compressed = new byte[(int) compressedLength];
++        buffer.readBytes(compressed);
++        return inflate(compressed, plainLength);
++    }
++
++    private static boolean writeCompressed(byte[] plain, ByteBuf buffer) {
++        Deflater deflater = new Deflater(Deflater.BEST_SPEED, true);
++        try {
++            deflater.setInput(plain);
++            deflater.finish();
++            // 额外的原文长度占4B；只有完整压缩编码严格更小时才使用压缩。
++            byte[] compressed = new byte[plain.length - 5];
++            int length = 0;
++            while (!deflater.finished() && length < compressed.length) {
++                int count = deflater.deflate(compressed, length, compressed.length - length);
++                if (count == 0) break;
++                length += count;
++            }
++            if (!deflater.finished()) return false;
++            buffer.writeInt(-(length + 1)).writeInt(plain.length).writeBytes(compressed, 0, length);
++            return true;
++        } finally {
++            deflater.end();
++        }
++    }
++
++    private static String inflate(byte[] compressed, int plainLength) {
++        Inflater inflater = new Inflater(true);
++        try {
++            inflater.setInput(compressed);
++            // 多留1B检测超出声明长度的输出，分配上限仍由1MiB限制约束。
++            byte[] plain = new byte[plainLength + 1];
++            int length = 0;
++            while (!inflater.finished() && length <= plainLength) {
++                int count = inflater.inflate(plain, length, plain.length - length);
++                length += count;
++                if (count == 0 && !inflater.finished()) {
++                    throw new IllegalArgumentException("压缩value不完整或无法继续解压");
++                }
++            }
++            if (!inflater.finished() || length != plainLength || inflater.getRemaining() != 0) {
++                throw new IllegalArgumentException("压缩value长度不匹配或存在剩余输入");
++            }
++            return new String(plain, 0, length, StandardCharsets.UTF_8);
++        } catch (DataFormatException error) {
++            throw new IllegalArgumentException("压缩value格式错误", error);
++        } finally {
++            inflater.end();
++        }
++    }
++
++    private static boolean enabled() {
++        return Boolean.getBoolean("ripple.wire.compression");
++    }
++
++    private static void checkLength(int length, boolean allowEmpty) {
++        if (length < (allowEmpty ? 0 : 1) || length > MAX_PAYLOAD_BYTES) {
++            throw new IllegalArgumentException("非法value长度: " + length);
++        }
++    }
++
++    private static void requireBytes(ByteBuf buffer, int length) {
++        if (buffer.readableBytes() < length) {
++            throw new IllegalArgumentException("value数据被截断");
++        }
++    }
++}
+diff --git a/ripple-common/src/main/java/ripple/common/tcp/decoder/DispatchRequestDecoder.java b/ripple-common/src/main/java/ripple/common/tcp/decoder/DispatchRequestDecoder.java
+index c82d985..c1685cb 100644
+--- a/ripple-common/src/main/java/ripple/common/tcp/decoder/DispatchRequestDecoder.java
++++ b/ripple-common/src/main/java/ripple/common/tcp/decoder/DispatchRequestDecoder.java
+@@ -15,6 +15,7 @@ import ripple.common.entity.Constants;
+ import ripple.common.helper.TypeHelper;
+ import ripple.common.tcp.Decoder;
+ import ripple.common.tcp.Message;
++import ripple.common.tcp.PayloadCodec;
+ import ripple.common.tcp.MessageType;
+ import ripple.common.tcp.message.DispatchRequest;
+ 
+@@ -34,11 +35,11 @@ public class DispatchRequestDecoder implements Decoder {
+         dispatchRequest.setApplicationName(TypeHelper.readString(byteBuf));
+         dispatchRequest.setKey(TypeHelper.readString(byteBuf));
+         if (dispatchRequest.getOperationType().equals(Constants.MESSAGE_TYPE_UPDATE)) {
+-            dispatchRequest.setValue(TypeHelper.readString(byteBuf));
++            dispatchRequest.setValue(PayloadCodec.read(byteBuf));
+         } else if (dispatchRequest.getOperationType().equals(Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE)) {
+             dispatchRequest.setBaseMessageUuid(TypeHelper.readUuid(byteBuf));
+             dispatchRequest.setAtomicOperation(TypeHelper.readString(byteBuf));
+-            dispatchRequest.setValue(TypeHelper.readString(byteBuf));
++            dispatchRequest.setValue(PayloadCodec.read(byteBuf));
+         }
+         dispatchRequest.setLastUpdate(new Date(byteBuf.readLong()));
+         dispatchRequest.setLastUpdateServerId(byteBuf.readInt());
+diff --git a/ripple-common/src/main/java/ripple/common/tcp/decoder/SyncRequestDecoder.java b/ripple-common/src/main/java/ripple/common/tcp/decoder/SyncRequestDecoder.java
+index ebb477b..22f3e48 100644
+--- a/ripple-common/src/main/java/ripple/common/tcp/decoder/SyncRequestDecoder.java
++++ b/ripple-common/src/main/java/ripple/common/tcp/decoder/SyncRequestDecoder.java
+@@ -15,6 +15,7 @@ import ripple.common.entity.Constants;
+ import ripple.common.helper.TypeHelper;
+ import ripple.common.tcp.Decoder;
+ import ripple.common.tcp.Message;
++import ripple.common.tcp.PayloadCodec;
+ import ripple.common.tcp.MessageType;
+ import ripple.common.tcp.message.SyncRequest;
+ 
+@@ -34,11 +35,11 @@ public class SyncRequestDecoder implements Decoder {
+         syncRequest.setApplicationName(TypeHelper.readString(byteBuf));
+         syncRequest.setKey(TypeHelper.readString(byteBuf));
+         if (syncRequest.getOperationType().equals(Constants.MESSAGE_TYPE_UPDATE)) {
+-            syncRequest.setValue(TypeHelper.readString(byteBuf));
++            syncRequest.setValue(PayloadCodec.read(byteBuf));
+         } else if (syncRequest.getOperationType().equals(Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE)) {
+             syncRequest.setBaseMessageUuid(TypeHelper.readUuid(byteBuf));
+             syncRequest.setAtomicOperation(TypeHelper.readString(byteBuf));
+-            syncRequest.setValue(TypeHelper.readString(byteBuf));
++            syncRequest.setValue(PayloadCodec.read(byteBuf));
+         }
+         syncRequest.setLastUpdate(new Date(byteBuf.readLong()));
+         syncRequest.setLastUpdateServerId(byteBuf.readInt());
+diff --git a/ripple-common/src/main/java/ripple/common/tcp/encoder/DispatchRequestEncoder.java b/ripple-common/src/main/java/ripple/common/tcp/encoder/DispatchRequestEncoder.java
+index cf2e276..bfc0f03 100644
+--- a/ripple-common/src/main/java/ripple/common/tcp/encoder/DispatchRequestEncoder.java
++++ b/ripple-common/src/main/java/ripple/common/tcp/encoder/DispatchRequestEncoder.java
+@@ -15,6 +15,7 @@ import ripple.common.entity.Constants;
+ import ripple.common.helper.TypeHelper;
+ import ripple.common.tcp.Encoder;
+ import ripple.common.tcp.Message;
++import ripple.common.tcp.PayloadCodec;
+ import ripple.common.tcp.message.DispatchRequest;
+ 
+ /**
+@@ -32,11 +33,11 @@ public class DispatchRequestEncoder implements Encoder {
+         TypeHelper.writeString(dispatchRequest.getApplicationName(), byteBuf);
+         TypeHelper.writeString(dispatchRequest.getKey(), byteBuf);
+         if (dispatchRequest.getOperationType().equals(Constants.MESSAGE_TYPE_UPDATE)) {
+-            TypeHelper.writeString(dispatchRequest.getValue(), byteBuf);
++            PayloadCodec.write(dispatchRequest.getValue(), byteBuf);
+         } else if (dispatchRequest.getOperationType().equals(Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE)) {
+             TypeHelper.writeUuid(dispatchRequest.getBaseMessageUuid(), byteBuf);
+             TypeHelper.writeString(dispatchRequest.getAtomicOperation(), byteBuf);
+-            TypeHelper.writeString(dispatchRequest.getValue(), byteBuf);
++            PayloadCodec.write(dispatchRequest.getValue(), byteBuf);
+         }
+         byteBuf.writeLong(dispatchRequest.getLastUpdate().getTime());
+         byteBuf.writeInt(dispatchRequest.getLastUpdateServerId());
+diff --git a/ripple-common/src/main/java/ripple/common/tcp/encoder/SyncRequestEncoder.java b/ripple-common/src/main/java/ripple/common/tcp/encoder/SyncRequestEncoder.java
+index ec4a412..dd9a862 100644
+--- a/ripple-common/src/main/java/ripple/common/tcp/encoder/SyncRequestEncoder.java
++++ b/ripple-common/src/main/java/ripple/common/tcp/encoder/SyncRequestEncoder.java
+@@ -15,6 +15,7 @@ import ripple.common.entity.Constants;
+ import ripple.common.helper.TypeHelper;
+ import ripple.common.tcp.Encoder;
+ import ripple.common.tcp.Message;
++import ripple.common.tcp.PayloadCodec;
+ import ripple.common.tcp.message.SyncRequest;
+ 
+ /**
+@@ -35,11 +36,11 @@ public class SyncRequestEncoder implements Encoder {
+         TypeHelper.writeString(syncRequest.getApplicationName(), byteBuf);
+         TypeHelper.writeString(syncRequest.getKey(), byteBuf);
+         if (syncRequest.getOperationType().equals(Constants.MESSAGE_TYPE_UPDATE)) {
+-            TypeHelper.writeString(syncRequest.getValue(), byteBuf);
++            PayloadCodec.write(syncRequest.getValue(), byteBuf);
+         } else if (syncRequest.getOperationType().equals(Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE)) {
+             TypeHelper.writeUuid(syncRequest.getBaseMessageUuid(), byteBuf);
+             TypeHelper.writeString(syncRequest.getAtomicOperation(), byteBuf);
+-            TypeHelper.writeString(syncRequest.getValue(), byteBuf);
++            PayloadCodec.write(syncRequest.getValue(), byteBuf);
+         }
+         byteBuf.writeLong(syncRequest.getLastUpdate().getTime());
+         byteBuf.writeInt(syncRequest.getLastUpdateServerId());
+diff --git a/ripple-common/src/test/java/ripple/common/tcp/CompressionWireTest.java b/ripple-common/src/test/java/ripple/common/tcp/CompressionWireTest.java
+new file mode 100644
+index 0000000..0846f16
+--- /dev/null
++++ b/ripple-common/src/test/java/ripple/common/tcp/CompressionWireTest.java
+@@ -0,0 +1,238 @@
++package ripple.common.tcp;
++
++import io.netty.buffer.ByteBuf;
++import io.netty.buffer.ByteBufUtil;
++import io.netty.buffer.Unpooled;
++import org.junit.After;
++import org.junit.Before;
++import org.junit.Test;
++import ripple.common.entity.Constants;
++import ripple.common.helper.TypeHelper;
++import ripple.common.tcp.decoder.DispatchRequestDecoder;
++import ripple.common.tcp.decoder.SyncRequestDecoder;
++import ripple.common.tcp.encoder.DispatchRequestEncoder;
++import ripple.common.tcp.encoder.SyncRequestEncoder;
++import ripple.common.tcp.message.DispatchRequest;
++import ripple.common.tcp.message.SyncRequest;
++
++import java.nio.charset.StandardCharsets;
++import java.util.Date;
++import java.util.Random;
++import java.util.UUID;
++
++import static org.junit.Assert.*;
++
++public class CompressionWireTest {
++    private static final String COMPRESSION = "ripple.wire.compression";
++    private static final String COMPACT = "ripple.wire.compact";
++    private String previousCompression;
++    private String previousCompact;
++
++    @Before
++    public void saveProperties() {
++        previousCompression = System.getProperty(COMPRESSION);
++        previousCompact = System.getProperty(COMPACT);
++        System.clearProperty(COMPRESSION);
++        System.clearProperty(COMPACT);
++    }
++
++    @After
++    public void restoreProperties() {
++        restore(COMPRESSION, previousCompression);
++        restore(COMPACT, previousCompact);
++    }
++
++    @Test
++    public void compressedSyncAndDispatchRoundTripAllValueOperationsAndBothUuidModes() {
++        String value = repeat("压缩内容😀", 128);
++        for (boolean compact : new boolean[]{false, true}) {
++            System.setProperty(COMPACT, Boolean.toString(compact));
++            for (boolean dispatch : new boolean[]{false, true}) {
++                for (boolean incremental : new boolean[]{false, true}) {
++                    Message request = request(dispatch, incremental, value);
++                    ByteBuf legacy = encode(request);
++                    System.setProperty(COMPRESSION, "true");
++                    ByteBuf encoded = encode(request);
++                    try {
++                        assertTrue(encoded.readableBytes() < legacy.readableBytes());
++                        int offset = valueOffset(encoded, dispatch, incremental);
++                        assertTrue(encoded.getInt(offset) < 0);
++                        // value之前的应用名、key等所有字段保持原编码。
++                        assertArrayEquals(ByteBufUtil.getBytes(legacy, 0, offset),
++                                ByteBufUtil.getBytes(encoded, 0, offset));
++                        assertMessageEquals(request, decode(encoded, dispatch));
++                    } finally {
++                        legacy.release();
++                        encoded.release();
++                        System.clearProperty(COMPRESSION);
++                    }
++                }
++            }
++        }
++    }
++
++    @Test
++    public void smallAndHighEntropyValuesKeepExactLegacyBytes() {
++        String[] values = {repeat("x", 32), highEntropyValue()};
++        for (String value : values) {
++            for (boolean dispatch : new boolean[]{false, true}) {
++                Message request = request(dispatch, false, value);
++                ByteBuf legacy = encode(request);
++                System.setProperty(COMPRESSION, "true");
++                ByteBuf encoded = encode(request);
++                try {
++                    assertArrayEquals(ByteBufUtil.getBytes(legacy), ByteBufUtil.getBytes(encoded));
++                    assertMessageEquals(request, decode(encoded, dispatch));
++                } finally {
++                    legacy.release();
++                    encoded.release();
++                    System.clearProperty(COMPRESSION);
++                }
++            }
++        }
++    }
++
++    @Test
++    public void disabledCompressionRejectsCompressedValueWithoutGuessing() {
++        System.setProperty(COMPRESSION, "true");
++        for (boolean dispatch : new boolean[]{false, true}) {
++            ByteBuf encoded = encode(request(dispatch, false, repeat("x", 1024)));
++            try {
++                assertTrue(encoded.getInt(valueOffset(encoded, dispatch, false)) < 0);
++                System.setProperty(COMPRESSION, "false");
++                assertThrows(IllegalArgumentException.class, () -> decode(encoded, dispatch));
++            } finally {
++                encoded.release();
++                System.setProperty(COMPRESSION, "true");
++            }
++        }
++    }
++
++    private static Message request(boolean dispatch, boolean incremental, String value) {
++        SyncRequest sync = new SyncRequest();
++        sync.setUuid(new UUID(1, 2));
++        sync.setMessageUuid(new UUID(3, 4));
++        sync.setOperationType(incremental ? Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE : Constants.MESSAGE_TYPE_UPDATE);
++        sync.setApplicationName(repeat("应用", 160));
++        sync.setKey(repeat("key", 180));
++        sync.setBaseMessageUuid(new UUID(5, 6));
++        sync.setAtomicOperation(Constants.ATOMIC_OPERATION_ADD_ENTRY);
++        sync.setValue(value);
++        sync.setLastUpdate(new Date(12345678));
++        sync.setLastUpdateServerId(7);
++        sync.setFromId(8);
++        if (!dispatch) return sync;
++        DispatchRequest result = new DispatchRequest();
++        result.setUuid(sync.getUuid());
++        result.setClientListSignature("signature");
++        result.setMessageUuid(sync.getMessageUuid());
++        result.setOperationType(sync.getOperationType());
++        result.setApplicationName(sync.getApplicationName());
++        result.setKey(sync.getKey());
++        result.setBaseMessageUuid(sync.getBaseMessageUuid());
++        result.setAtomicOperation(sync.getAtomicOperation());
++        result.setValue(sync.getValue());
++        result.setLastUpdate(sync.getLastUpdate());
++        result.setLastUpdateServerId(sync.getLastUpdateServerId());
++        return result;
++    }
++
++    private static ByteBuf encode(Message message) {
++        ByteBuf result = Unpooled.buffer();
++        if (message instanceof DispatchRequest) new DispatchRequestEncoder().encode(message, result);
++        else new SyncRequestEncoder().encode(message, result);
++        return result;
++    }
++
++    private static Message decode(ByteBuf source, boolean dispatch) {
++        ByteBuf buffer = source.duplicate();
++        MessageType type = MessageType.get(buffer.readByte());
++        Message result = dispatch ? new DispatchRequestDecoder().decode(buffer, type)
++                : new SyncRequestDecoder().decode(buffer, type);
++        assertEquals(0, buffer.readableBytes());
++        return result;
++    }
++
++    private static int valueOffset(ByteBuf source, boolean dispatch, boolean incremental) {
++        ByteBuf buffer = source.duplicate();
++        buffer.readByte();
++        TypeHelper.readUuid(buffer);
++        if (dispatch) TypeHelper.readString(buffer);
++        TypeHelper.readUuid(buffer);
++        if (!dispatch && TypeHelper.isCompactWire()) buffer.readByte();
++        else TypeHelper.readString(buffer);
++        TypeHelper.readString(buffer);
++        TypeHelper.readString(buffer);
++        if (incremental) {
++            TypeHelper.readUuid(buffer);
++            TypeHelper.readString(buffer);
++        }
++        return buffer.readerIndex();
++    }
++
++    private static void assertMessageEquals(Message expected, Message actual) {
++        assertEquals(expected.getUuid(), actual.getUuid());
++        if (expected instanceof SyncRequest) {
++            SyncRequest a = (SyncRequest) expected;
++            SyncRequest b = (SyncRequest) actual;
++            assertEquals(a.getMessageUuid(), b.getMessageUuid());
++            assertEquals(a.getOperationType(), b.getOperationType());
++            assertEquals(a.getApplicationName(), b.getApplicationName());
++            assertEquals(a.getKey(), b.getKey());
++            assertEquals(a.getValue(), b.getValue());
++            assertEquals(a.getLastUpdate(), b.getLastUpdate());
++            assertEquals(a.getLastUpdateServerId(), b.getLastUpdateServerId());
++            assertEquals(a.getFromId(), b.getFromId());
++            if (Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE.equals(a.getOperationType())) {
++                assertEquals(a.getBaseMessageUuid(), b.getBaseMessageUuid());
++                assertEquals(a.getAtomicOperation(), b.getAtomicOperation());
++            }
++        } else {
++            DispatchRequest a = (DispatchRequest) expected;
++            DispatchRequest b = (DispatchRequest) actual;
++            assertEquals(a.getClientListSignature(), b.getClientListSignature());
++            assertEquals(a.getMessageUuid(), b.getMessageUuid());
++            assertEquals(a.getOperationType(), b.getOperationType());
++            assertEquals(a.getApplicationName(), b.getApplicationName());
++            assertEquals(a.getKey(), b.getKey());
++            assertEquals(a.getValue(), b.getValue());
++            assertEquals(a.getLastUpdate(), b.getLastUpdate());
++            assertEquals(a.getLastUpdateServerId(), b.getLastUpdateServerId());
++            if (Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE.equals(a.getOperationType())) {
++                assertEquals(a.getBaseMessageUuid(), b.getBaseMessageUuid());
++                assertEquals(a.getAtomicOperation(), b.getAtomicOperation());
++            }
++        }
++    }
++
++    private static String repeat(String value, int count) {
++        StringBuilder result = new StringBuilder();
++        for (int i = 0; i < count; i++) result.append(value);
++        return result.toString();
++    }
++
++    private static String highEntropyValue() {
++        Random random = new Random(2345);
++        StringBuilder result = new StringBuilder();
++        int length = 0;
++        while (length < 512) {
++            int choice = random.nextInt(1000);
++            int codePoint = choice < 885 ? random.nextInt(128)
++                    : choice < 977 ? 128 + random.nextInt(1920)
++                    : choice < 997 ? 2048 + random.nextInt(53248)
++                    : 65536 + random.nextInt(1048576);
++            String next = new String(Character.toChars(codePoint));
++            int bytes = next.getBytes(StandardCharsets.UTF_8).length;
++            if (length + bytes <= 512) {
++                result.append(next);
++                length += bytes;
++            }
++        }
++        return result.toString();
++    }
++
++    private static void restore(String property, String value) {
++        if (value == null) System.clearProperty(property);
++        else System.setProperty(property, value);
++    }
++}
+diff --git a/ripple-common/src/test/java/ripple/common/tcp/PayloadCodecTest.java b/ripple-common/src/test/java/ripple/common/tcp/PayloadCodecTest.java
+new file mode 100644
+index 0000000..e9c9ed7
+--- /dev/null
++++ b/ripple-common/src/test/java/ripple/common/tcp/PayloadCodecTest.java
+@@ -0,0 +1,155 @@
++package ripple.common.tcp;
++
++import io.netty.buffer.ByteBuf;
++import io.netty.buffer.ByteBufUtil;
++import io.netty.buffer.Unpooled;
++import org.junit.After;
++import org.junit.Before;
++import org.junit.Test;
++import ripple.common.helper.TypeHelper;
++
++import java.nio.charset.StandardCharsets;
++import java.util.Arrays;
++import java.util.zip.Deflater;
++
++import static org.junit.Assert.*;
++
++public class PayloadCodecTest {
++    private static final String PROPERTY = "ripple.wire.compression";
++    private static final int LIMIT = 1024 * 1024;
++    private String previous;
++
++    @Before
++    public void enableCompression() {
++        previous = System.getProperty(PROPERTY);
++        System.setProperty(PROPERTY, "true");
++    }
++
++    @After
++    public void restoreProperty() {
++        if (previous == null) System.clearProperty(PROPERTY);
++        else System.setProperty(PROPERTY, previous);
++    }
++
++    @Test
++    public void payloadBelowThresholdAndDisabledCompressionKeepLegacyBytes() {
++        for (String value : new String[]{"", repeated(32), repeated(511), "中文😀"}) {
++            assertLegacy(value);
++        }
++        System.clearProperty(PROPERTY);
++        assertLegacy(repeated(1024));
++        System.setProperty(PROPERTY, "false");
++        assertLegacy(repeated(1024));
++    }
++
++    @Test
++    public void thresholdAndOneMiBLimitRoundTrip() {
++        for (int length : new int[]{512, 1024, LIMIT}) {
++            ByteBuf buffer = Unpooled.buffer();
++            try {
++                String value = repeated(length);
++                PayloadCodec.write(value, buffer);
++                assertTrue(buffer.getInt(0) < 0);
++                assertTrue(buffer.readableBytes() < length + 4);
++                assertEquals(value, PayloadCodec.read(buffer));
++                assertEquals(0, buffer.readableBytes());
++            } finally {
++                buffer.release();
++            }
++        }
++    }
++
++    @Test
++    public void oversizedEncoderValueIsRejectedBeforeWriting() {
++        ByteBuf buffer = Unpooled.buffer();
++        try {
++            assertThrows(IllegalArgumentException.class, () -> PayloadCodec.write(repeated(LIMIT + 1), buffer));
++            assertEquals(0, buffer.readableBytes());
++        } finally {
++            buffer.release();
++        }
++    }
++
++    @Test
++    public void malformedHeadersAndTruncatedBodiesAreRejected() {
++        reject(Unpooled.buffer().writeByte(0));
++        reject(Unpooled.buffer().writeInt(-1));
++        reject(Unpooled.buffer().writeInt(Integer.MIN_VALUE));
++        reject(Unpooled.buffer().writeInt(-(LIMIT + 2)));
++        reject(Unpooled.buffer().writeInt(-5));
++        reject(Unpooled.buffer().writeInt(-5).writeShort(2));
++        for (int length : new int[]{-1, 0, LIMIT + 1, Integer.MAX_VALUE}) {
++            reject(Unpooled.buffer().writeInt(-5).writeInt(length).writeInt(0));
++        }
++        reject(Unpooled.buffer().writeInt(-5).writeInt(512).writeByte(0));
++        reject(Unpooled.buffer().writeInt(LIMIT + 1));
++        reject(Unpooled.buffer().writeInt(32).writeByte(1));
++        reject(Unpooled.buffer().writeInt(-5).writeInt(512).writeInt(-1));
++    }
++
++    @Test
++    public void incompleteStreamsTrailingInputAndLengthMismatchAreRejected() {
++        byte[] compressed = deflate(repeated(1024));
++        reject(frame(Arrays.copyOf(compressed, compressed.length - 1), 1024));
++        reject(frame(Arrays.copyOf(compressed, compressed.length + 1), 1024));
++        reject(frame(compressed, 1023));
++        reject(frame(compressed, 1025));
++        // 压缩正文很小，但真实输出超出允许值，不能只相信头部声明。
++        reject(frame(deflate(repeated(LIMIT + 1)), LIMIT));
++    }
++
++    @Test
++    public void disabledCompressionExplicitlyRejectsNegativeHeaders() {
++        System.clearProperty(PROPERTY);
++        reject(Unpooled.buffer().writeInt(-1));
++        reject(frame(deflate(repeated(1024)), 1024));
++    }
++
++    private static void assertLegacy(String value) {
++        ByteBuf expected = Unpooled.buffer();
++        ByteBuf actual = Unpooled.buffer();
++        try {
++            TypeHelper.writeString(value, expected);
++            PayloadCodec.write(value, actual);
++            assertArrayEquals(ByteBufUtil.getBytes(expected), ByteBufUtil.getBytes(actual));
++            assertEquals(value, PayloadCodec.read(actual));
++            assertEquals(0, actual.readableBytes());
++        } finally {
++            expected.release();
++            actual.release();
++        }
++    }
++
++    private static void reject(ByteBuf buffer) {
++        try {
++            assertThrows(IllegalArgumentException.class, () -> PayloadCodec.read(buffer));
++        } finally {
++            buffer.release();
++        }
++    }
++
++    private static ByteBuf frame(byte[] compressed, int plainLength) {
++        return Unpooled.buffer().writeInt(-(compressed.length + 1)).writeInt(plainLength).writeBytes(compressed);
++    }
++
++    private static byte[] deflate(String value) {
++        byte[] input = value.getBytes(StandardCharsets.UTF_8);
++        byte[] output = new byte[input.length + 1024];
++        Deflater deflater = new Deflater(Deflater.BEST_SPEED, true);
++        try {
++            deflater.setInput(input);
++            deflater.finish();
++            int length = deflater.deflate(output);
++            assertTrue(deflater.finished());
++            return Arrays.copyOf(output, length);
++        } finally {
++            deflater.end();
++        }
++    }
++
++    private static String repeated(int length) {
++        char[] chars = new char[length];
++        Arrays.fill(chars, 'x');
++        return new String(chars);
++    }
++}
