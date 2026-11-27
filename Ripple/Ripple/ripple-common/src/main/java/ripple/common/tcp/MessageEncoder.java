@@ -13,6 +13,7 @@ package ripple.common.tcp;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.handler.codec.EncoderException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MessageEncoder extends MessageToByteEncoder<Message> {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageEncoder.class);
 
+    private final boolean packedFrame;
+    private final boolean allowCompression;
+
     private Map<MessageType, Encoder> encoders;
 
     private Map<MessageType, Encoder> getEncoders() {
@@ -36,6 +40,12 @@ public class MessageEncoder extends MessageToByteEncoder<Message> {
     }
 
     public MessageEncoder() {
+        this(false);
+    }
+
+    public MessageEncoder(boolean packedFrame) {
+        this.packedFrame = packedFrame;
+        this.allowCompression = packedFrame && PackedFrame.compressionEnabled();
         this.setEncoders(new ConcurrentHashMap<>());
     }
 
@@ -47,7 +57,22 @@ public class MessageEncoder extends MessageToByteEncoder<Message> {
     protected void encode(ChannelHandlerContext ctx, Message message, ByteBuf out) {
         Encoder encoder = this.getEncoders().get(message.getType());
         if (encoder != null) {
-            encoder.encode(message, out);
+            if (!packedFrame) {
+                encoder.encode(message, out);
+                return;
+            }
+            int start = out.writerIndex();
+            // The existing encoder writes the type at offset 3; overwrite it with the packed header.
+            out.writeZero(PackedFrame.HEADER_BYTES - 1);
+            boolean compressed = encoder.encodePacked(message, out, allowCompression);
+            int frameBytes = out.writerIndex() - start;
+            int length = frameBytes - PackedFrame.HEADER_BYTES;
+            int type = message.getType().getValue() & 0xff;
+            if (length <= 0 || frameBytes > PackedFrame.MAX_FRAME_BYTES || type > PackedFrame.TYPE_MASK) {
+                throw new EncoderException("Message does not fit the Ripple packed frame header");
+            }
+            out.setInt(start, (type << PackedFrame.LENGTH_BITS) | length
+                    | (compressed ? PackedFrame.COMPRESSED_MASK : 0));
         } else {
             LOGGER.info("[MessageEncoder] encode(): Cannot find the encoder for the message type: {}.", message.getType());
         }

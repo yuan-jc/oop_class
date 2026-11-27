@@ -17,4 +17,11 @@ import io.netty.buffer.ByteBuf;
  */
 public interface Decoder {
     Message decode(ByteBuf byteBuf, MessageType messageType);
+
+    default Message decodePacked(ByteBuf byteBuf, MessageType messageType, boolean compressed) {
+        if (compressed) {
+            throw new IllegalArgumentException("Compression not supported for " + messageType);
+        }
+        return decode(byteBuf, messageType);
+    }
 }

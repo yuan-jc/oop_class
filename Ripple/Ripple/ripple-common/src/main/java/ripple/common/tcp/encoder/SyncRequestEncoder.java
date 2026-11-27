@@ -15,6 +15,7 @@ import ripple.common.entity.Constants;
 import ripple.common.helper.TypeHelper;
 import ripple.common.tcp.Encoder;
 import ripple.common.tcp.Message;
+import ripple.common.tcp.PayloadCodec;
 import ripple.common.tcp.message.SyncRequest;
 
 /**
@@ -23,15 +24,25 @@ import ripple.common.tcp.message.SyncRequest;
 public class SyncRequestEncoder implements Encoder {
     @Override
     public void encode(Message message, ByteBuf byteBuf) {
+        encodePacked(message, byteBuf, false);
+    }
+
+    @Override
+    public boolean encodePacked(Message message, ByteBuf byteBuf, boolean allowCompression) {
+        boolean compressed = false;
         SyncRequest syncRequest = (SyncRequest) message;
         byteBuf.writeByte(syncRequest.getType().getValue());
         TypeHelper.writeUuid(syncRequest.getUuid(), byteBuf);
         TypeHelper.writeUuid(syncRequest.getMessageUuid(), byteBuf);
-        TypeHelper.writeString(syncRequest.getOperationType(), byteBuf);
+        if (TypeHelper.isCompactWire()) {
+            byteBuf.writeByte(operationCode(syncRequest.getOperationType()));
+        } else {
+            TypeHelper.writeString(syncRequest.getOperationType(), byteBuf);
+        }
         TypeHelper.writeString(syncRequest.getApplicationName(), byteBuf);
         TypeHelper.writeString(syncRequest.getKey(), byteBuf);
         if (syncRequest.getOperationType().equals(Constants.MESSAGE_TYPE_UPDATE)) {
-            TypeHelper.writeString(syncRequest.getValue(), byteBuf);
+            compressed = PayloadCodec.write(syncRequest.getValue(), byteBuf, allowCompression);
         } else if (syncRequest.getOperationType().equals(Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE)) {
             TypeHelper.writeUuid(syncRequest.getBaseMessageUuid(), byteBuf);
             TypeHelper.writeString(syncRequest.getAtomicOperation(), byteBuf);
@@ -40,5 +51,19 @@ public class SyncRequestEncoder implements Encoder {
         byteBuf.writeLong(syncRequest.getLastUpdate().getTime());
         byteBuf.writeInt(syncRequest.getLastUpdateServerId());
         byteBuf.writeInt(syncRequest.getFromId());
+        return compressed;
+    }
+
+    private static int operationCode(String operationType) {
+        if (Constants.MESSAGE_TYPE_UPDATE.equals(operationType)) {
+            return 1;
+        }
+        if (Constants.MESSAGE_TYPE_DELETE.equals(operationType)) {
+            return 2;
+        }
+        if (Constants.MESSAGE_TYPE_INCREMENTAL_UPDATE.equals(operationType)) {
+            return 3;
+        }
+        throw new IllegalArgumentException("无效的同步操作类型: " + operationType);
     }
 }

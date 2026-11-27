@@ -28,8 +28,9 @@ import ripple.common.tcp.Message;
 import ripple.server.core.Node;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
+import java.net.SocketAddress;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -43,7 +44,7 @@ public class NettyServer {
     private String address;
     private int port;
     private Channel serverChannel;
-    private List<Channel> connectedNodes;
+    private List<Channel> connectedNodes = new CopyOnWriteArrayList<>();
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -124,7 +125,7 @@ public class NettyServer {
                 return true;
             }
 
-            this.setConnectedNodes(new ArrayList<>());
+            this.setConnectedNodes(new CopyOnWriteArrayList<>());
             this.setBossGroup(new NioEventLoopGroup());
             this.setWorkerGroup(new NioEventLoopGroup());
 
@@ -200,9 +201,18 @@ public class NettyServer {
     }
 
     public Channel findChannel(String address, int port) {
-        List<Channel> toIter = new ArrayList<>(this.getConnectedNodes());
-        for (Channel channel : toIter) {
-            InetSocketAddress remoteAddress = ((NioSocketChannel) channel).remoteAddress();
+        for (Channel channel : this.getConnectedNodes()) {
+            if (channel == null || !channel.isActive()) {
+                continue;
+            }
+            SocketAddress socketAddress = channel.remoteAddress();
+            if (!(socketAddress instanceof InetSocketAddress)) {
+                continue;
+            }
+            InetSocketAddress remoteAddress = (InetSocketAddress) socketAddress;
+            if (remoteAddress.isUnresolved()) {
+                continue;
+            }
             if (remoteAddress.getHostString().equals(address) && remoteAddress.getPort() == port) {
                 return channel;
             }

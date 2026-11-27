@@ -13,10 +13,9 @@ package ripple.server.tcp;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.LengthFieldPrepender;
 import ripple.common.tcp.MessageDecoder;
 import ripple.common.tcp.MessageEncoder;
+import ripple.common.tcp.PackedFrame;
 import ripple.common.tcp.MessageHandler;
 import ripple.common.tcp.MessageType;
 import ripple.common.tcp.decoder.DeleteRequestDecoder;
@@ -104,11 +103,10 @@ public class ServerChannelInitializer extends ChannelInitializer<SocketChannel> 
     @Override
     protected void initChannel(SocketChannel socketChannel) {
         ChannelPipeline pipeline = socketChannel.pipeline();
-        pipeline.addLast(new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 4, 0, 4));
-        pipeline.addLast(new LengthFieldPrepender(4));
+        boolean packedFrame = PackedFrame.configure(pipeline);
 
-        MessageEncoder messageEncoder = new MessageEncoder();
-        MessageDecoder messageDecoder = new MessageDecoder();
+        MessageEncoder messageEncoder = new MessageEncoder(packedFrame);
+        MessageDecoder messageDecoder = new MessageDecoder(packedFrame);
         MessageHandler messageHandler = new ServerMessageHandler(this.getNettyServer());
 
         pipeline.addLast(messageEncoder);

@@ -1,0 +1,1143 @@
+第10课
+复用与解耦（二）
+——类型、抽象类、接口
+面向对象程序设计
+Object-Oriented Programming
+
+说明
+仅供选修国科大“面向对象程序设计”课程的学生复 习功课时参考，不得用于其它目的的翻印制作。
+这里所提供的只是课堂讲授的部分内容，万不可误认 为课件以外的内容都不要求掌握。
+
+2026/11/17
+
+面向对象程序设计
+
+2
+
+第11周，复用与解耦1：层次结构
+
+（组合、继承、多态）
+
+2026年秋季课程安排 第12周，复用与解耦2：类型信息
+
+、抽象类、接口
+
+第1周，导言
+
+第13周，持久化-时间 第13周提交大作业
+
+第2周，认识软件系统的复杂性、有
+
+组织的复杂系统
+
+第2周给出推荐开源 项目选题清单
+
+第14周，持久化-空间 第15周，并发
+
+报告（第二版）
+
+第3周，程序语言、开发环境的发展 第4周，9.25中秋假期 第3周确定选题，
+需要具体到特
+
+第15周，课堂研讨3：设计模式的优化 与重构（择机补课）
+
+第5周，10.2国庆假期 定方向
+
+第16周，课堂研讨4：大作业汇报
+
+第6周，建模方法和建模语言
+
+第16周，课堂研讨5：大作业汇报
+
+第7周，抽象
+
+（择机补课）
+
+第8周，课堂研讨1：扩展点的需求
+
+分析与初步方案
+
+第8周提交大作业 报告（初版）
+
+第17周，课堂研讨6：大作业汇报 第17周，课堂研讨7：大作业汇报
+
+第9周，课堂研讨2：扩展点的需求
+
+（择机补课）
+
+分析与初步方案
+
+第18周， 1.1元旦假期
+
+第10周，封装和模块化
+2026/11/17
+
+第19/20周，考试
+面向对象程序设计
+
+第 18 周 提 交 大 作 业
+报告（第三版）， 以及扩展代码 3
+
+大作业：大家关心的问题（1/2）
+
+1. 如何选题：二选一
+
+① 推荐项目：课程提供开源项目建议清单，给定具体扩展要求
+
+② 自荐项目：学生参与的研究所科研实践任务，自荐扩展实现（源码规模达
+
+到万级）
+2. 是否组队：不组队，以个人为单位
+
+根据国科大相关要求，《报告》应对 大模型使用情况进行标注和说明，将
+
+3. 作业形式：
+
+作为大作业评分关键依据
+
+① 报告 - 系统扩展的分析与设计报告 ② 代码 - 系统扩展的源代码实现 ③ 汇报 - 课堂研讨：按学号、每人2次（扩展点需求分析研讨、结题研讨）
+4. 作业提交地址：提交至Gitee等源码托管平台的个人repo
+
+5. 如何评分：
+
+① 报告的质量
+
+② 扩展点能否正常运行，是否有配套的测试代码，扩展后的实际效果（测试 对比、社区贡献等）
+
+③ 课堂研讨表现占比35%
+2026/11/17
+
+面向对象程序设计
+
+4
+
+大作业：大家关心的问题（2/2）
+6. 进度安排：
+第2周，授课团队给出开源项目及方向候选清单 第3周，学生确定选题，需要具体到开源项目或特定科研实践任务的具体方向 第8、9周，课堂研讨（问题分析与方案研讨），提交系统分析与设计报告（初版） • 大模型辅助：利用大模型辅助理解目标系统的代码结构、核心对象与执行流程，
+结合具体任务开展问题或需求分析、对象建模与初步方案设计；对大模型生成的 分析结果进行验证和修正，形成自己的工程判断。 • 侧重点包括：性能现象、问题定位、支撑证据、需求与架构矛盾、扩展定位、需 求理解、对象划分... • 课堂研讨：主要围绕“问题或需求分析与初步方案”进行 PPT 分享和讨论。 第13周，修订并提交系统分析与设计报告（第二版） • 验证并判断大模型方案，重点识别其中与真实系统不一致或不合理的部分。 • 形成初步实现。记录方案迭代过程，包括尝试过的不同方案、失败的思路及其原 因，并结合实际结果对原有判断进行修正。 第15-18周，课堂研讨（结题研讨），对目标系统及本学期开发工作进行整体汇报 第18周，提交系统分析与设计报告（最终版）及最终代码
+
+助教有话说
+过去的优秀作业：
+• 源码阅读： • 雷正宇：https://842376130.gitbook.io/fastjson-learning-report/ • 曾鸿斌：https://yuankong11.gitbook.io/fastjson/ • 代瀚堃：https://toscode.gitee.com/dhank/object-oriented-programming
+• 设计实现： • 王子曰：https://gitee.com/woopc/oopclass • 高梓源：https://github.com/ETOgaosion/UCAS_OOP_course • 肖书慧：https://gitee.com/xyaoerworkspace/OOP-works
+
+2026/11/17
+
+面向对象程序设计
+
+6
+
+学习目标
+类型的意义
+# 类型匹配 # 类型绑定
+Java程序中的类型
+# 运行时类型信息
+
+2026/11/17
+
+面向对象程序设计
+
+7
+
+学习目标
+内外部视图解耦
+# 让“使用”与“实现”分离，让程序员可以编写可复用性、可扩展性 更高的代码
+Java中的抽象类和接口
+# 抽象类 # 接口——实现接口的人不必要关心谁去使用，而使用接口的人也不用 关心谁实现的接口，由接口将他们联系在一起，例如：USB接口
+
+2026/11/17
+
+面向对象程序设计
+
+8
+
+类型的意义
+保障类型安全，动态绑定类型
+
+对象模型的关键要素
+
+次要
+
+类型
+
+多态
+
+分布式
+
+持久
+超越时空
+
+并发
+挽救“摩尔定律”
+
+主要
+2026/11/17
+
+层次结构
+复用、复用、复用
+
+封装、模块化
+信息隐藏/高内聚、低耦合
+
+抽象
+从问题域提取类和对象
+
+面向对象程序设计
+
+10
+
+类型的概念
+对象模型关于“类型”的概念，主要来自于抽象数据类型理论
+# “一个类型是关于结构或行为属性的准确描述，一组实体共享这些属性”[1]
+# 类型（type）和类（class）的概念相似，在很多面向对象语言中可以互换， 或者说“类实现了类型”
+程序语言领域关于“类型”的概念[2]
+# 在程序的执行过程中，一个程序变量可以承担一定的数值（数据）范围，这 种范围的上限被称为该变量的类型
+例如，一个布尔类型变量 x 应该在程序每次运行中只承担布尔值。如 果 x 是布尔类型，那么布尔表达式 not(x) 在程序每次运行中都有合理 的意义；如果 x 承载了布尔以外的值，例如字符串，那么布尔表达 式 not(x) 并无合理意义。
+
+[1] Brodie M L, Mylopoulos J, Schmidt J W E. On conceptual modeling: perspectives from artificial intelligence[J]. Journal of
+Information Systems Education, 1984. [2] Luca Cardelli，Microsoft Research, http://lucacardelli.name/Papers/TypeSystems.pdf
+
+2026/11/17
+
+面向对象程序设计
+
+11
+
+类型的概念
+类型匹配
+
+类型绑定
+
+[图片来源：面向对象分析与设计, Grady Booch 等著]
+
+2026/11/17
+
+面向对象程序设计
+
+12
+
+类型匹配
+不同程序语言对类型检查的严格程度存在差异
+# 强类型的面向对象语言，不允许调用对象的类或父类中未被定义过的操作
+类型是关于一个对象的类的强制规定，不同类型的对象不能够互换使用， 或者说需要在严格限制的条件下互换使用
+java(强类型) 代码片段
+
+javascript(弱类型) 代码片段
+
+x = 5; // 5 x = x + 'A'; // '5A'
+
+2026/11/17
+
+面向对象程序设计
+
+13
+
+类型匹配
+不同程序语言对类型检查的严格程度存在差异
+# 强类型的面向对象语言，不允许调用对象的类或父类中未被定义过的操作
+类型是关于一个对象的类的强制规定，不同类型的对象不能够互换使用， 或者说需要在严格限制的条件下互换使用
+C (弱类型) 代码片段
+
+2026/11/17
+
+面向对象程序设计
+
+14
+
+类型匹配 cont.
+强类型的优缺点
+# 如果没有类型检查，程序可能在运行时以神秘方式崩溃 # 复杂系统的编码、编译、调试过程比较繁琐，错误检查越早越好 # 有利于编译器生成更有效率的目标代码（例如，准确的类型信息可以避免运行时 的一些昂贵的安全检查） # 有利于模块化的协作开发和编译（因为模块之间依赖于准确且稳定的类型接口）
+# 强类型引入了语义上的依赖关系，所以父类的改动可能会导致子类重新编译 父类的方法签名（方法名、参数列表）做了修改，子类需要修改并重新编译 如果父类、子类的源码在不同团队维护，会影响协作效率
+
+2026/11/17
+
+面向对象程序设计
+
+15
+
+事故报告
+https://wwwusers.cse.umn.edu/~arnold/d isasters/ariane5rep.html
+
+Ada代码
+
+“一个普遍的关于欧洲航天局阿利亚纳 五号火箭失败的说法是因为Ada语言在 编译过程的检查失败导致的，将大的浮 点数转换成整数...它没有发送飞行控制 信息，而是送出了一个诊断位模式，表 明 在 将 一 个 64 位 浮 点 数 转 换 成 16 位 有 符号整数时，产生了溢出…分析显示有 7处浮点转整数的程序，其中4处做了妥 善的异常处理，而其余3处没有（基于4 型火箭的遗留代码经验）。不恰当的处 理异常直接触发了软件终止程序。”
+2026/11/17
+
+1 begin 2 sensor_get(vertical_veloc_sensor); 3 sensor_get(horizontal_veloc_sensor); 4 vertical_veloc_bias := integer(vertical_veloc_sensor); 5 horizontal_veloc_bias := integer(horizontal_veloc_sensor); 6 ... 7 exception 8 when numeric_error => calculate_vertical_veloc(); 9 when others => use_irs1(); 10 end;
+
+面向对象程序设计
+
+16
+
+类型绑定
+名字与类型绑定的时间
+# 静态类型，变量和表达式的类型在编译时确定 # 动态类型，变量和表达式的类型在运行时确定，也称延迟绑定
+动态类型 + 继承= 多态(polymorphism)
+# 多态代表了类型理论中的一个核心概念，即一个名字（如变量声明）在编译时绑 定了某个父类，在运行时可以代表这个父类的不同子类的对象，进而表现出不同的 行为
+
+在面向对象语言中 多态是抽象、继承之后的第三种基本特征 它是“动态类型”和“继承”互相作用的结果
+
+2026/11/17
+
+面向对象程序设计
+
+17
+
+“类型”不匹配？
+适配器模式——转换类型
+# 又称包装器模式，核心思想是不修改现有类的 代码，通过中间适配器将两个不兼容的接口连接 起来，从而实现类之间的协作
+
+代理模式——屏蔽差异
+# 通过代理对象控制对目标对象的访问，可在不 修改真实对象的情况下增加功能或可控的访问
+
+服务计算——屏蔽进程间、分布式、跨 语言、跨平台的差异
+
+2026/11/17
+
+面向对象程序设计
+
+18
+
+Java程序中的类型
+——运行时类型信息
+
+2026/11/17
+
+面向对象程序设计
+
+19
+
+运行时类型信息（RTTI）
+
+WHY
+
+类型泛化后，如何区分具体子类，进而调用其特有方法？
+需要在运行时，识别一个对象的类型
+
+温度、压力、位置、转速、流 量、气体浓度、爆震…
+普通汽车的传感器数量>10
+高端汽车的传感器数量>100
+
+Car
+- engine: Engine …
+
+Engine
+
+特斯拉Model X的传感器数 量>1000
+例如：中高端引擎(V6及以上) 具有自动报警功能，高端引 擎(V8及以上)具有自动定位 功能
+
+L4Engine
++ start + stop
+
+V6Engine
++ start + stop + getAlarmInfo
+
+V8Engine
++ start + stop + getAlarmInfo + getLocation
+
+W12Engine
++ start + stop + getAlarmInfo + getLocation + autoTunning
+
+2026/11/17
+
+面向对象程序设计
+
+20
+
+运行时类型信息（RTTI）
+HOW
+在OO语言中，通常有两种方式可以实现RTTI
+
+“传统的”RTTI方式 它假定我们在程序编译时 已经知道了所有的类型
+
+“反射”机制 它允许我们在运行时发现 和使用类的信息
+
+2026/11/17
+
+面向对象程序设计
+
+21
+
+类型转换
+数据更范精围增确加
+Byte、short、int、long、float、double
+
+L4Engine
+
+类型更抽象
+Engine
+
+2026/11/17
+
+面向对象程序设计
+
+Object
+22
+
+类型转换
+向上转换（往父类方向），可自动进行，因为一个子类的对象一定也 是父类的对象
+例如：
+V6Engine v6 = new V6Engine();//或者 Engine v6 = new V6Engine(); myCar.setEngine(v6);
+向下转换（往子类方向），需要显示声明，因为无法确定一个父类的 对象到底属于哪个子类类型
+例如:
+V6Engine v6 = (V6Engine)myCar.getEngine();
+
+2026/11/17
+
+面向对象程序设计
+
+23
+
+类型检查
+
+向下转换不一定成功，可能出现ClassCastException 使用instanceof运算符来检测一个对象是否属于一个指定类
+例如：
+if(myCar.getEngine() instanceof V6Engine){ V6Engine v6 = (V6Engine)myCar.getEngine(); …
+}
+
+或者使用Class.isInstance()
+if(V6Engine.class.isInstance(myCar.getEngine())){ V6Engine v6 = (V6Engine)myCar.getEngine(); …
+}
+
+示例L10.1
+
+2026/11/17
+
+面向对象程序设计
+
+24
+
+反射机制
+WHY
+可视化编程
+
+分布式对象
+
+2026/11/17
+
+面向对象程序设计
+
+25
+
+分布式计算——远程对象
+
+RMI (The Java Tutorials) - Oracle Help Center https://docs.oracle.com/javase/tutorial/rmi/overview.html Java Remote Method Invocation https://en.wikipedia.org/wiki/Java_remote_method_invocation
+
+2026/11/17
+
+面向对象程序设计
+
+26
+
+面向对象程序设计与可视化编程
+类是可重用的代码单元
+因为它把属性（成员变量）和行为（成员方法）聚合为一个单元， 可以被直接重用，也可以通过组合、继承得到重用
+“模块化装配”是一种理想的编程方式，“可视化编程” 在此方面是成功典范
+从开发工具来看：微软的Visual BASIC(VB)、Borland的Delphi 从编程目的来看：GUI设计、业务流程、数据处理流程…
+
+2026/11/17
+
+面向对象程序设计
+
+27
+
+面向对象程序设计与可视化编程 cont.
+可视化GUI编程的基本方式
+1、选择、装配GUI组件
+
+2、设置GUI组件的属性，比如颜色、文本、尺寸等等
+
+示例L10.2.1
+
+3、添加GUI组件的行为，通常是指“组件上发生的动作”
+
+2026/11/17
+
+面向对象程序设计
+
+28
+
+面向对象程序设计与可视化编程 cont.
+
+背后的原理
+1、选择、装配GUI组件 GUI构造工具：生成创建组件对象的代码
+
+构造工具如何知 道组件的构造方 法？
+
+2、设置GUI组件的属性，比如颜色、文本、尺寸等等 GUI构造工具：生成设置对象属性的代码
+
+构造工具如何知 道组件的有哪些 属性及属性访问/ 修改方法？
+
+3、添加GUI组件的行为，通常是指“组件上发生的动作”GUI构造工具如何
+
+GUI构造工具：生成添加事件处理器的代码
+
+知道组件具有那 些事件处理器方
+
+法？
+
+2026/11/17
+
+面向对象程序设计
+
+29
+
+可视化编程与JavaBean
+对于GUI组件来说，需要具有被GUI构建工具“感知其 属性和方法”的能力
+Swing是通过“方法命名规则”+ “反射机制”来实现上述能力 前者负责规定类的方法如何命名 后者负责按照规则，抽取类的信息（属性、事件处理器等）
+基于抽取出来的类信息，GUI构建工 具可以生成组件的属性、事件处理器 等列表
+
+2026/11/17
+
+面向对象程序设计
+
+30
+
+可视化编程与JavaBean
+JavaBean是一种符合特定命名规则的类
+其最基本的规则是： 1、必须具有一个无参构造函数 GUI构建工具可以通过反射机制创建组件对象 2、成员变量私有化，名称为xxx的成员变量，需要包含getXxx()和 setXxx()公有访问方法，get方法返回的类型要与set方法的参数类 型相同，对于boolean类型的成员变量，也可以把get替换为is GUI构建工具可以通过反射机制自动获取get/set/is后面的属性名
+Java GUI组件类都符合JavaBean的命名规则
+
+2026/11/17
+
+面向对象程序设计
+
+31
+
+利用反射机制获取JavaBean的类信息
+Java提供反射机制的原因之一就是为了支持JavaBean，
+在反射机制基础上，Java提供了一系列便捷方式来获取JavaBean信 息，比如，使用java.beans.Introspector和java.beans.BeanInfo 类，我们可以模拟GUI构建工具的工作原理
+示例L10.2.2
+
+2026/11/17
+
+面向对象程序设计
+
+32
+
+学习目标
+内外部视图解耦
+# 让“使用”与“实现”分离，让程序员可以编写可复用性、可扩展性 更高的代码
+Java中的抽象类和接口
+# 抽象类 # 接口——实现接口的人不必要关心谁去使用，而使用接口的人也不用 关心谁实现的接口，由接口将他们联系在一起，例如：USB接口
+
+2026/11/17
+
+面向对象程序设计
+
+33
+
+内外部视图解耦（使用和实现分离）
+——抽象类、接口
+
+2026/11/17
+
+面向对象程序设计
+
+34
+
+内外部视图解耦（使用和实现分离）的意义
+更好的复用和扩展
+
+动因
+
+使用父类编程
+
+具体到各个子类，start()和stop()方法 的具体实现（行为）各不相同，但在父类
+
+Car
+- engine: Engine + setEngine(e: Engine )
+
+Engine中这两个方法是“空”的，它们存 在的价值是为了“使用父类编程”，即在 父类层面体现出各个子类的公共方法
+
++ start() + shutoff()
+
+Engine
++ start( ) + stop( ) …
+
+我们希望编程语言能够强制程序员 在各个子类中必须给出start()和 stop()方法的具体实现
+
+L4Engine
++ start( ) + stop( ) …
+
+V6Engine
++ start( ) + stop( ) …
+
+V8Engine
++ start( ) + stop( ) …
+
+W12Engine
++ start( ) + stop( ) …
+
+2026/11/17
+
+面向对象程序设计
+
+36
+
+动因 cont.
+使用父类编程
+L4Engine l4 = new L4Engine();//或者 Engine l4 = new L4Engine(); myCar.setEngine(l4);
+在使用父类编程时，需要创建子类对象，再转型为父类，因此创建一 个Engine对象并没有任何实际意义，且会导致访问“空”方法。
+我们希望编程语言能够自动阻止直接创建父类的行为
+
+2026/11/17
+
+面向对象程序设计
+
+37
+
+抽象类(abstract class)和抽象方法
+上述两种诉求，促使面向对象语言提供了抽象方法、抽象类
+在Java、C#中称为抽象方法，在C++中称为纯虚函数
+抽象方法——使用abstract关键字，仅有声明，没有方法体 abstract void start(); abstract void stop();
+
+抽 象 类 —— 如 果 一 个 类 中 包 含 了 抽 象 方 法 ， 则 该 类 必 须 使 用
+abstract关键字声明为抽象类 abstract class Engine(){ abstract void start(); abstract void stop();
+//…
+}
+
+2026/11/17
+
+面向对象程序设计
+
+38
+
+关于抽象类
+如果抽象父类的子类不能实现所有的抽象方法，那么子 类也必须定义为抽象的
+
+抽象类的父类可以是具体的，例如：Object类
+
+虽然不能使用new操作符来实例化抽象类，但仍然可以 定义它的构造方法，这个构造方法可以在它子类的构造 方法中调用
+即使不调用，编译器也会自动地将super()作为子类构造方法的第一条语
+句
+
+2026/11/17
+
+面向对象程序设计
+
+39
+
+关于抽象类 cont.
+子类可以覆盖父类的方法，并将它定义为abstract
+这种情况很少见，但当父类的方法在子类中变得不合法时，它是很有用 的
+虽然不能使用new操作符来实例化抽象类，但仍可以将 其作为一种数据类型，比如用于创建对象数组：
+Engine[] engineArray = new Engine[10];
+
+2026/11/17
+
+面向对象程序设计
+
+40
+
+抽象类示例
+
+Car - engine: Engine + setEngine(e: Engine ) + start() + shutoff()
+抽象方法是斜体的
+
+abstract Engine
++ start( ) + stop( ) …
+
+示例L10.3
+
+L4Engine
++ start( ) + stop( ) …
+
+V6Engine
++ start( ) + stop( ) …
+
+V8Engine
++ start( ) + stop( ) …
+
+W12Engine
++ start( ) + stop( ) …
+
+2026/11/17
+
+面向对象程序设计
+
+41
+
+其它抽象类示例
+抽象类Calendar和子类GregorianCalendar
+
+示例L10.4
+
+2026/11/17
+
+面向对象程序设计
+
+42
+
+思考
+一辆普通的汽车大约有20~30个传感器，高端的汽车大约有120个 传感器
+温度、压力、位置、转速、流量、气体浓度、爆震等传感器
+如何在中高端“引擎”（V6及以上）中增加自动报警功能，在高 端“引擎”（V8及以上）中增加自动定位功能?
+abstract Engine + start + stop
+
+L4Engine
+
+V6Engine
+
+V8Engine
+
+W12Engine
+
++ start + stop
+
++ start + stop
+
++ start + stop
+
++ start + stop
+
++ getAlarmInfo
+
++ getAlarmInfo
+
++ getAlarmInfo
+
++ getLocation
+
++ getLocation
+
+2026/11/17
+
+面向对象程序设计
+
+43
+
+思考 cont.
+“父-子”继承关系可以让程序代码与“子类”的具体 “行为”分离，但无法让“行为”与“类型”分离
+
+abstract Engine
++ start + stop + getAlarmInfo + getLocation
+
+“引擎”固有的行为和其它概念 的行为混在一起
+
+L4Engine
++ start + stop + getAlarmInfo? + getLocation?
+
+V6Engine
++ start + stop + getAlarmInfo + getLocation?
+
+V8Engine
++ start + stop + getAlarmInfo + getLocation
+
+W12Engine
++ start + stop + getAlarmInfo + getLocation
+
+2026/11/17
+
+面向对象程序设计
+
+44
+
+接口(interface)
+接口，一种与类相似的结构
+Java/C#/Object-c等面向对象语言提供了接口
+abstract Engine + start + stop
+
+interface CanAlarm
++ getAlarmInfo
+
+interface CanLocate
++ getLocation
+
+L4Engine
++ start + stop
+
+V6Engine
++ start + stop + getAlarmInfo
+
+V8Engine
++ start + stop + getAlarmInfo + getLocation
+
+W12Engine
++ start + stop + getAlarmInfo + getLocation
+
+2026/11/17
+
+面向对象程序设计
+
+45
+
+关于接口(Java)
+
+接口是一种极度抽象的类，通常只包含常量和抽象方法
+使用关键字interface代替class来定义接口 使用关键字implements代替extends来实现接口
+接口用于定义多个类的共同行为，特别是不相关的类
+例如，除了引擎，汽车的其它部件也可以实现CanAlarm接口、CanLocate 接口
+
+接口可以多重继承
+例如，可以同时实现CanAlarm接口和CanLocate接口
+public class W12Engine extends Engine implements CanAlarm, CanLocate { // }
+
+2026/11/17
+
+面向对象程序设计
+
+46
+
+关于接口(Java) cont.
+与抽象类相似，不能使用new操作符创建接口的实例， 可以使用接口作为变量的数据类型或类型转换的结果
+CanAlarm v6 = new V6Engine(“4.0”);
+
+由于接口中所有的数据域都是public final static，而且 所有方法都是public abstract，所以Java允许忽略这些 修饰符
+
+public interface T1 { public static final int K = 1; 等价于
+public abstract void p(); }
+
+public interface T1 { int K = 1;
+void p(); }
+
+2026/11/17
+
+面向对象程序设计
+
+47
+
+接口示例
+abstract Engine + start + stop
+
+interface CanAlarm
++ getAlarmInfo
+
+interface CanLocate
++ getLocation
+
+L4Engine
++ start + stop
+
+V6Engine
++ start + stop + getAlarmInfo
+
+V8Engine
++ start + stop + getAlarmInfo + getLocation
+
+W12Engine
++ start + stop + getAlarmInfo + getLocation
+
+示例L10.5
+
+2026/11/17
+
+面向对象程序设计
+
+48
+
+其它接口示例
+Comparable接口
+Java类库中的许多类（例如：Date和String）实现了 Comparable接口以定 义对象的自然顺序
+
+2026/11/17
+
+面向对象程序设计
+
+示例L10.6.1
+49
+
+其它接口示例 cont.
+包装类
+1. 包装类没有无参构造方法 2. 所有包装类的实例都是不可变的，一旦对象被创建，其内部值不能改变 3. 每一个包装类覆盖了在Object类中定义的toString、equals和hashCod方法 4. 除了Boolean类，其它包装类都实现了Comparable接口
+
+java.lang.Comparable -
+
+java.lang.Object -
+
+Double Float
+
+-
+
+-
+
+2026/11/17
+
+Number -
+
+Character Boolean
+
+-
+
+-
+
+示例L10.6.2
+
+Long
+
+Integer
+
+Short
+
+Byte
+
+-
+
+-
+
+-
+
+-
+
+面向对象程序设计
+
+50
+
+其它接口示例 cont.
+Cloneable接口
+Cloneable接口是一种特殊的、没有任何方法定义的接口，称为标记接口 Java库中的很多类（例如：Date和Calendar）实现了Cloneable接口
+示例L10.7
+
+Object的clone方法是native，效率高，但对于引用型成员变量只 能进行浅拷贝，因此，子类覆盖该方法的实现原则包括： 1. 声明实现Cloneable接口 2. 调用super.clone拿到一个对象 3. 把对象中浅copy的引用类型成员变量进行深拷贝
+
+2026/11/17
+
+面向对象程序设计
+
+51
+
+接口 vs. 抽象类
+定义一个接口与定义一个抽象类的区别
+
+变量
+抽 象 无限制 类
+
+构造方法
+
+方法
+
+子类通过构造方法链调用构造方法 ，抽象类不能用new操作符实例化
+
+无限制
+
+接 口
+
+所有变量必须是 public static final
+
+没有构造方法,接口不能用new操作 符实例化
+
+所有方法必须是 公共的抽象实例 方法
+
+2026/11/17
+
+面向对象程序设计
+
+52
+
+接口 vs. 抽象类 cont.
+所有的类继承者同一个根类Object，但是接口没有
+类继承是单一，接口实现可以多重 接口也可以利用关键字extends继承其它接口，“接口-子接口-实现 类”与“父类-子类”相似，也可以向上/向下类型转换
+
+2026/11/17
+
+面向对象程序设计
+
+53
+
+是使用接口还是继承？
+一般来说，描述父子关系的“强是关系”（strong is-a relationship）应该用类继承建模
+例如：职员是人，所以他们的关系是用类继承建模
+“弱是关系”（weak is-a relationship）也称为类属关系 （is-kind-of relationship），表明对象拥有某种属性。可用 接口建模。
+例如：所有的字符串都是可比较的，String类实现Comparable接口
+
+2026/11/17
+
+面向对象程序设计
+
+54
+
+是使用接口还是继承？ cont.
+使用接口编程——完全解耦、便于适配
+在设计基类时，如果有可能不带任何方法实现或成员变量，应该选 择使用接口而不是抽象类 或者说，如果知道某事物应该成为一个基类，那么第一选择应该是 努力使它成为一个接口
+会导致过度设计？
+
+2026/11/17
+
+面向对象程序设计
+
+55
+
+接口的优势——完全解耦、便于扩展
+
+Car
+- engine: Engine + setEngine(e: Engine ) + start() + shutoff()
+
+abstract Engine
+- displacement:double + start( ) + stop( )
+
+abstract ElectricEngine
+- kWh:double + start( ) + stop( )
+
+L4Engine V6Engine V8Engine W12Engine …
+
+2026/11/17
+
+面向对象程序设计
+
+56
+
+接口的优势——完全解耦、便于扩展
+
+Car
+- engine: Engine + setEngine(e: Engine) + start() + shutoff()
+
+interface Engine
++ start( ) + stop( )
+
+abstract OilEngine
+- displacement:double …
+
+abstract ElectricEngine
+- kWh:double …
+
+L4Engine V6Engine V8Engine W12Engine
+
+…
+
+2026/11/17
+
+面向对象程序设计
+
+57
+
+其它接口示例 cont.
+Eclipse IDE
+Eclipse IDE是一种可扩展的集成开发环境，每项功能都是“工具插件”， 这些“工具插件”遵循特定“接口”，因此便于集成和扩展
+
+2026/11/17
+
+面向对象程序设计
+
+58
+
+Oracle于2017年出台 新的发布政策，每6个 月发布一次Java SE
+
+[来源] https://dzone.com/articles/a-short-history-of-java http://openjdk.java.net/projects/jdk/
+
+2026/11/17
+
+面向对象程序设计
+
+59
+
+接口的发展
+abstract AbstractCollection
+
+interface Iterable + iterator()
+interface Collection
+
+abstract AbstractList
+
+interface List
+
+“Why do many collection classes in java extend the abstract class and implement the interface (which is also implemented by the given abstract class)?”
+
+ArrayList + iterator()
+
+2026/11/17
+
+面向对象程序设计
+
+60
+
+接口的发展 cont.
+abstract AbstractCollection
+
+interface Iterable + iterator()
+interface Collection
+
+abstract AbstractList
+
+interface List
+
+for(Object item: list){ System.out.println(item);
+}
+
+ArrayList + iterator()
+
+2026/11/17
+
+面向对象程序设计
+
+61
+
+接口的发展 cont.
+
+1. 需要扩展新的方法， 方法参数可以是函数 （lambda表达式）
+2. 该方法的扩展点应该 在顶层接口
+
+abstract AbstractCollection
+abstract AbstractList
+
+interface Iterable + iterator()
+interface Collection
+interface List
+
+list.forEach(item ->
+
+ArrayList
+
+System.out.println(item)); + iterator()
+
+2026/11/17
+
+面向对象程序设计
+
+62
+
+接口的发展 cont.
+防 御 方 法 —— 接 口 中 提供了默认实现的方法
+
+不会破坏二进制级别、 源代码级别的兼容性， 因为所有这些接口的实 现类都不需要提供新增 方法的实现
+
+abstract AbstractCollection
+abstract AbstractList
+
+interface Iterable + iterator() + forEach(Consumer)
+interface Collection
+interface List
+
+2026/11/17
+
+ArrayList + iterator()
+
+面向对象程序设计
+
+63
+
+接口的发展 cont.
+Interface Iterable in Java SE 7
+https://docs.oracle.com/javase/7/docs/api/java/lang/Iterable.html
+Interface Iterable in Java SE 8
+https://docs.oracle.com/javase/8/docs/api/java/lang/Iterable.html
+
+2026/11/17
+
+面向对象程序设计
+
+64
+
+接口的发展 cont.
+函数接口——接口里只有一个抽象方法，lambda 表达式的函数体来充当这个抽象方法的实现
+abstract AbstractCollection
+
+Java SE 8 中增 加 了 一 个 新 的 包 ： java.util.function ，包含了常用的函数接口
+
+abstract AbstractList
+
+interface Iterable + iterator() + forEach(Consumer)
+interface Collection
+interface List
+
+2026/11/17
+
+ArrayList + iterator()
+面向对象程序设计
+
+示例L10.8
+65
+
+Thank You!
+面向对象程序设计 Object-Oriented Programming
+
+

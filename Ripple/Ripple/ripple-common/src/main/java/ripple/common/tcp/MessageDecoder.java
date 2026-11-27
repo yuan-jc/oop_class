@@ -26,6 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MessageDecoder extends ByteToMessageDecoder {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageDecoder.class);
 
+    private final boolean packedFrame;
+    private final boolean allowCompression;
+
     private Map<MessageType, Decoder> decoders;
 
     private Map<MessageType, Decoder> getDecoders() {
@@ -37,6 +40,12 @@ public class MessageDecoder extends ByteToMessageDecoder {
     }
 
     public MessageDecoder() {
+        this(false);
+    }
+
+    public MessageDecoder(boolean packedFrame) {
+        this.packedFrame = packedFrame;
+        this.allowCompression = packedFrame && PackedFrame.compressionEnabled();
         this.setDecoders(new ConcurrentHashMap<>());
     }
 
@@ -46,10 +55,18 @@ public class MessageDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) {
-        MessageType messageType = MessageType.get(byteBuf.readByte());
+        int header = packedFrame ? byteBuf.readInt() : 0;
+        boolean compressed = (header & PackedFrame.COMPRESSED_MASK) != 0;
+        byte type = packedFrame
+                ? (byte) ((header >>> PackedFrame.LENGTH_BITS) & PackedFrame.TYPE_MASK)
+                : byteBuf.readByte();
+        MessageType messageType = MessageType.get(type);
+        if (compressed && (!allowCompression || messageType != MessageType.SYNC_REQUEST)) {
+            throw new IllegalArgumentException("Unexpected Ripple compressed frame");
+        }
         Decoder decoder = this.getDecoders().get(messageType);
         if (decoder != null) {
-            Message message = decoder.decode(byteBuf, messageType);
+            Message message = decoder.decodePacked(byteBuf, messageType, compressed);
             out.add(message);
         } else {
             LOGGER.info("[MessageDecoder] decode(): Cannot find the decoder for the message type: {}.", messageType);

@@ -17,4 +17,10 @@ import io.netty.buffer.ByteBuf;
  */
 public interface Encoder {
     void encode(Message message, ByteBuf byteBuf);
+
+    /** Returns true only if this particular frame contains a compressed value. */
+    default boolean encodePacked(Message message, ByteBuf byteBuf, boolean allowCompression) {
+        encode(message, byteBuf);
+        return false;
+    }
 }
